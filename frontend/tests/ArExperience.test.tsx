@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { ArExperience } from '../src/components/ar/ArExperience'
 
@@ -45,19 +45,26 @@ describe('ArExperience tracking overlays', () => {
   })
 
   test('shows the correct anchored label and keeps one label per target', async () => {
-    render(<ArExperience />)
-    fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
-    await waitFor(() => expect(screen.getByText('0 tracked')).toBeInTheDocument())
+    vi.useFakeTimers()
+    try {
+      render(<ArExperience />)
+      fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
+      await act(async () => { await Promise.resolve() })
 
-    const instance = mindarMock.instance
-    expect(instance).not.toBeNull()
-    expect(document.querySelectorAll('.ar-target-label')).toHaveLength(6)
-    act(() => instance?.anchors[1].onTargetFound?.())
+      const instance = mindarMock.instance
+      expect(instance).not.toBeNull()
+      expect(document.querySelectorAll('.ar-target-label')).toHaveLength(6)
+      act(() => instance?.anchors[1].onTargetFound?.())
+      expect(screen.getByText('Confirming target')).toBeInTheDocument()
+      act(() => { vi.advanceTimersByTime(180) })
 
-    expect(screen.getByText('1 tracked')).toBeInTheDocument()
-    const label = document.querySelector('[data-target-id="region-caribe"]') as HTMLElement
-    expect(label).toHaveStyle({ visibility: 'visible' })
-    expect(label).toHaveAttribute('data-target-id', 'region-caribe')
+      expect(screen.getByText('1 tracked')).toBeInTheDocument()
+      const label = document.querySelector('[data-target-id="region-caribe"]') as HTMLElement
+      expect(label).toHaveStyle({ visibility: 'visible' })
+      expect(label).toHaveAttribute('data-target-id', 'region-caribe')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   test('hides a lost label after the grace period and restores it on reacquisition', async () => {
@@ -71,13 +78,14 @@ describe('ArExperience tracking overlays', () => {
       act(() => instance?.anchors[0].onTargetFound?.())
       act(() => instance?.anchors[0].onTargetLost?.())
       const label = document.querySelector('[data-target-id="colombia-completa"]') as HTMLElement
-      expect(label).toHaveStyle({ visibility: 'visible' })
+      expect(label).toHaveStyle({ visibility: 'hidden' })
       expect(screen.getByText('Tracking lost')).toBeInTheDocument()
 
       act(() => { vi.advanceTimersByTime(250) })
       expect(label).toHaveStyle({ visibility: 'hidden' })
 
       act(() => instance?.anchors[0].onTargetFound?.())
+      act(() => { vi.advanceTimersByTime(180) })
       expect(label).toHaveStyle({ visibility: 'visible' })
       expect(screen.getByText('Detected and tracked')).toBeInTheDocument()
     } finally {
@@ -86,21 +94,27 @@ describe('ArExperience tracking overlays', () => {
   })
 
   test('losing one target does not hide another target label', async () => {
-    render(<ArExperience />)
-    fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
-    await waitFor(() => expect(screen.getByText('0 tracked')).toBeInTheDocument())
+    vi.useFakeTimers()
+    try {
+      render(<ArExperience />)
+      fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
+      await act(async () => { await Promise.resolve() })
 
-    const instance = mindarMock.instance
-    act(() => {
-      instance?.anchors[0].onTargetFound?.()
-      instance?.anchors[1].onTargetFound?.()
-      instance?.anchors[0].onTargetLost?.()
-    })
+      const instance = mindarMock.instance
+      act(() => {
+        instance?.anchors[0].onTargetFound?.()
+        instance?.anchors[1].onTargetFound?.()
+        instance?.anchors[0].onTargetLost?.()
+        vi.advanceTimersByTime(180)
+      })
 
-    expect(screen.getByText('1 tracked')).toBeInTheDocument()
-    const label = document.querySelector('[data-target-id="region-caribe"]') as HTMLElement
-    expect(label).toHaveStyle({ visibility: 'visible' })
-    const statusRow = Array.from(document.querySelectorAll('.tracking-row')).find((row) => row.textContent?.includes('Región Caribe')) as HTMLElement
-    expect(within(statusRow).getByText('Detected and tracked')).toBeInTheDocument()
+      expect(screen.getByText('1 tracked')).toBeInTheDocument()
+      const label = document.querySelector('[data-target-id="region-caribe"]') as HTMLElement
+      expect(label).toHaveStyle({ visibility: 'visible' })
+      const statusRow = Array.from(document.querySelectorAll('.tracking-row')).find((row) => row.textContent?.includes('Región Caribe')) as HTMLElement
+      expect(within(statusRow).getByText('Detected and tracked')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

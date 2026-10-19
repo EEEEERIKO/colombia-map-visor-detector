@@ -4,13 +4,16 @@ import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 import { TARGETS } from '../../types/api'
 import './ar.css'
 
-type TrackStatus = 'not-detected' | 'detected' | 'lost'
+type TrackStatus = 'not-detected' | 'provisional' | 'detected' | 'lost'
 const LABEL_HIDE_GRACE_MS = 250
+const TARGET_CONFIRMATION_MS = 180
 
 export function ArExperience() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mindarRef = useRef<MindARThree | null>(null)
   const hideTimersRef = useRef(new Map<string, number>())
+  const confirmationTimersRef = useRef(new Map<string, number>())
+  const confirmedTargetsRef = useRef(new Set<string>())
   const runIdRef = useRef(0)
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
@@ -21,9 +24,16 @@ export function ArExperience() {
     hideTimersRef.current.clear()
   }
 
+  const clearConfirmationTimers = () => {
+    confirmationTimersRef.current.forEach((timer) => window.clearTimeout(timer))
+    confirmationTimersRef.current.clear()
+  }
+
   const stop = () => {
     runIdRef.current += 1
     clearHideTimers()
+    clearConfirmationTimers()
+    confirmedTargetsRef.current.clear()
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
@@ -39,6 +49,8 @@ export function ArExperience() {
   useEffect(() => () => {
     runIdRef.current += 1
     clearHideTimers()
+    clearConfirmationTimers()
+    confirmedTargetsRef.current.clear()
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
@@ -71,14 +83,27 @@ export function ArExperience() {
         const object = new CSS3DObject(label); object.scale.set(0.001, 0.001, 0.001); anchor.group.add(object)
         anchor.onTargetFound = () => {
           if (runId !== runIdRef.current || mindarRef.current !== instance) return
+          if (confirmedTargetsRef.current.has(target.id) || confirmationTimersRef.current.has(target.id)) return
           const timer = hideTimersRef.current.get(target.id)
           if (timer) { window.clearTimeout(timer); hideTimersRef.current.delete(target.id) }
-          label.style.visibility = 'visible'
-          label.setAttribute('aria-hidden', 'false')
-          setTargetStatus(index, 'detected')
+          label.style.visibility = 'hidden'
+          label.setAttribute('aria-hidden', 'true')
+          setTargetStatus(index, 'provisional')
+          const confirmationTimer = window.setTimeout(() => {
+            if (runId !== runIdRef.current || mindarRef.current !== instance) return
+            confirmationTimersRef.current.delete(target.id)
+            confirmedTargetsRef.current.add(target.id)
+            label.style.visibility = 'visible'
+            label.setAttribute('aria-hidden', 'false')
+            setTargetStatus(index, 'detected')
+          }, TARGET_CONFIRMATION_MS)
+          confirmationTimersRef.current.set(target.id, confirmationTimer)
         }
         anchor.onTargetLost = () => {
           if (runId !== runIdRef.current || mindarRef.current !== instance) return
+          const confirmationTimer = confirmationTimersRef.current.get(target.id)
+          if (confirmationTimer) { window.clearTimeout(confirmationTimer); confirmationTimersRef.current.delete(target.id) }
+          confirmedTargetsRef.current.delete(target.id)
           label.setAttribute('aria-hidden', 'true')
           setTargetStatus(index, 'lost')
           const timer = window.setTimeout(() => {
@@ -86,6 +111,9 @@ export function ArExperience() {
             hideTimersRef.current.delete(target.id)
           }, LABEL_HIDE_GRACE_MS)
           hideTimersRef.current.set(target.id, timer)
+        }
+        anchor.onTargetUpdate = () => {
+          if (runId === runIdRef.current && mindarRef.current === instance && !confirmedTargetsRef.current.has(target.id)) label.style.visibility = 'hidden'
         }
       })
       await instance.start()
@@ -102,5 +130,5 @@ export function ArExperience() {
   }
 
   const activeCount = Object.values(tracking).filter((status) => status === 'detected').length
-  return <section className="ar-experience"><div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>Image tracking</h1><p>Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR recognizes a target.</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-actions"><button onClick={start} disabled={experienceState === 'starting'}>{experienceState === 'active' ? 'Restart tracking' : 'Start camera'}</button>{experienceState === 'active' && <button className="secondary" onClick={stop}>Stop camera</button>}</div>{error && <p className="ar-error" role="alert">{error}</p>}<div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></section>
+  return <section className="ar-experience"><div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>Image tracking</h1><p>Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-actions"><button onClick={start} disabled={experienceState === 'starting'}>{experienceState === 'active' ? 'Restart tracking' : 'Start camera'}</button>{experienceState === 'active' && <button className="secondary" onClick={stop}>Stop camera</button>}</div>{error && <p className="ar-error" role="alert">{error}</p>}<div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'provisional' ? 'Confirming target' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></section>
 }
