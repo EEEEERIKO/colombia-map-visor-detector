@@ -9,7 +9,7 @@ const LABEL_HIDE_GRACE_MS = 250
 const TARGET_CONFIRMATION_MS = 180
 const MINDAR_WARMUP_TOLERANCE = 8
 
-export function ArExperience() {
+export function ArExperience({ onValidationChange }: { onValidationChange?: (result: ReturnType<typeof deriveGlobalValidation>) => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mindarRef = useRef<MindARThree | null>(null)
   const hideTimersRef = useRef(new Map<string, number>())
@@ -135,5 +135,6 @@ export function ArExperience() {
 
   const activeCount = Object.values(tracking).filter((status) => status === 'detected').length
   const globalValidation = deriveGlobalValidation(tracking)
+  useEffect(() => { onValidationChange?.(globalValidation) }, [globalValidation, onValidationChange])
   return <section className="ar-experience"><div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>Image tracking</h1><p>Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-actions"><button onClick={start} disabled={experienceState === 'starting'}>{experienceState === 'active' ? 'Restart tracking' : 'Start camera'}</button>{experienceState === 'active' && <button className="secondary" onClick={stop}>Stop camera</button>}</div>{error && <p className="ar-error" role="alert">{error}</p>}<section className={`global-status ${globalValidation.state}`} aria-live="polite"><strong>{globalStatusLabel[globalValidation.state]}</strong><span>{globalValidation.confirmedRegions.length}/5 regions confirmed{globalValidation.fullMapConfirmed ? ' · complete map confirmed' : ''}</span>{globalValidation.mapRecognized && globalValidation.assemblyStatus === 'unknown' && <small>Recognition is complete; physical assembly remains unknown.</small>}</section><div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'provisional' ? 'Confirming target' : tracking[target.id] === 'temporarily-lost' ? 'Brief tracking loss' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></section>
 }
