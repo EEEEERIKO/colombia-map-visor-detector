@@ -1,9 +1,10 @@
 .ar-experience { min-height: calc(100vh - 112px); }
 .ar-header { display: flex; justify-content: space-between; gap: 20px; align-items: start; max-width: 760px; margin-bottom: 18px; }
 .ar-header h1 { margin-bottom: 10px; }
-.ar-view { position: relative; min-height: min(68vh, 720px); overflow: hidden; border: 1px solid #39483e; border-radius: 16px; background: #0d1210; }
-.ar-view video, .ar-view canvas { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; }
-.ar-view > div { position: absolute !important; inset: 0; }
+.ar-view { position: relative; isolation: isolate; min-height: min(68vh, 720px); overflow: hidden; border: 1px solid #39483e; border-radius: 16px; background: #0d1210; }
+.ar-view video { position: absolute !important; z-index: 0 !important; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; visibility: visible !important; }
+.ar-view canvas { position: absolute !important; z-index: 1 !important; inset: 0; width: 100% !important; height: 100% !important; pointer-events: none; }
+.ar-view > div { position: absolute !important; z-index: 2 !important; inset: 0; pointer-events: none; }
 .ar-actions { display: flex; gap: 10px; margin: 14px 0; }
 .ar-error { color: #ffb0a9; background: #4d292b; border-radius: 8px; padding: 10px 12px; }
 .tracking-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; max-width: 900px; }

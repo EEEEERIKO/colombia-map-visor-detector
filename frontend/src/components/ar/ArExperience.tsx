@@ -15,13 +15,26 @@ export function ArExperience() {
 
   const stop = () => {
     const instance = mindarRef.current
-    if (instance) { instance.renderer.setAnimationLoop(null); instance.stop(); instance.renderer.dispose(); mindarRef.current = null }
+    if (instance) {
+      instance.renderer.setAnimationLoop(null)
+      try { instance.stop() } catch { /* MindAR may not have started its video yet. */ }
+      instance.renderer.dispose()
+      mindarRef.current = null
+    }
     if (containerRef.current) containerRef.current.replaceChildren()
     setExperienceState('stopped')
     setTracking(Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
   }
 
-  useEffect(() => () => { const instance = mindarRef.current; if (instance) { instance.renderer.setAnimationLoop(null); instance.stop(); instance.renderer.dispose(); mindarRef.current = null } }, [])
+  useEffect(() => () => {
+    const instance = mindarRef.current
+    if (instance) {
+      instance.renderer.setAnimationLoop(null)
+      try { instance.stop() } catch { /* MindAR may not have started its video yet. */ }
+      instance.renderer.dispose()
+      mindarRef.current = null
+    }
+  }, [])
 
   const setTargetStatus = (index: number, status: TrackStatus) => setTracking((current) => ({ ...current, [TARGETS[index].id]: status }))
 
@@ -42,10 +55,15 @@ export function ArExperience() {
         anchor.onTargetLost = () => setTargetStatus(index, 'lost')
       })
       await instance.start()
+      const video = containerRef.current.querySelector('video')
+      if (video) { video.muted = true; video.playsInline = true; video.style.zIndex = '0' }
       instance.renderer.setAnimationLoop(() => { instance.renderer.render(instance.scene, instance.camera); instance.cssRenderer.render(instance.cssScene, instance.camera) })
       setExperienceState('active')
     } catch (cause) {
-      stop(); setExperienceState('error'); setError(cause instanceof DOMException && cause.name === 'NotAllowedError' ? 'Camera permission was denied.' : 'AR tracking could not start. Check camera permissions, HTTPS/localhost, and the tracking resource.')
+      stop(); setExperienceState('error')
+      if (cause instanceof DOMException && cause.name === 'NotAllowedError') setError('Camera permission was denied. Allow camera access for this site and try again.')
+      else if (cause instanceof Error && cause.message === 'Camera access requires HTTPS or localhost.') setError('Camera access requires HTTPS or localhost. Open the app through http://localhost:5173 or an HTTPS URL.')
+      else setError('AR tracking could not start. Check camera permissions, HTTPS/localhost, and the tracking resource.')
     }
   }
 
