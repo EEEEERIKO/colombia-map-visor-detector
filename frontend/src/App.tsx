@@ -1,54 +1,78 @@
 import { useCallback, useState } from 'react'
 import { ArExperience } from './components/ar/ArExperience'
-import { AcquisitionWorkspace } from './components/camera/AcquisitionWorkspace'
 import { TARGETS, type TargetId } from './types/api'
 import { deriveGlobalValidation, type GlobalValidationResult } from './components/ar/globalValidation'
 
+type Screen = 'home' | 'map' | 'challenge' | 'regions' | 'complete'
 const initialValidation = deriveGlobalValidation(Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
-
-const regionCopy: Record<Extract<TargetId, `region-${string}`>, { name: string; subtitle: string; color: string }> = {
-  'region-caribe': { name: 'CARIBE', subtitle: 'Mar, música y alegría', color: 'caribe' },
-  'region-andina': { name: 'ANDINA', subtitle: 'Montañas y cultura', color: 'andina' },
-  'region-pacifica': { name: 'PACÍFICA', subtitle: 'Selva y océano', color: 'pacifica' },
-  'region-orinoquia': { name: 'ORINOQUÍA', subtitle: 'Llanos y horizonte', color: 'orinoquia' },
-  'region-amazonia': { name: 'AMAZONÍA', subtitle: 'Naturaleza sin límites', color: 'amazonia' },
+const regionTargets = TARGETS.filter((target) => target.type === 'region')
+const regionCopy: Record<string, { name: string; subtitle: string; color: string; emoji: string }> = {
+  'region-caribe': { name: 'CARIBE', subtitle: 'Mar, música y alegría', color: 'caribe', emoji: '🌊' },
+  'region-andina': { name: 'ANDINA', subtitle: 'Montañas y cultura', color: 'andina', emoji: '⛰️' },
+  'region-pacifica': { name: 'PACÍFICA', subtitle: 'Selva y océano', color: 'pacifica', emoji: '🐋' },
+  'region-orinoquia': { name: 'ORINOQUÍA', subtitle: 'Llanos y horizonte', color: 'orinoquia', emoji: '🦜' },
+  'region-amazonia': { name: 'AMAZONÍA', subtitle: 'Naturaleza sin límites', color: 'amazonia', emoji: '🌿' },
 }
 
 export default function App() {
-  const [validation, setValidation] = useState<GlobalValidationResult>(initialValidation)
+  const [screen, setScreen] = useState<Screen>('home')
+  const [regionIndex, setRegionIndex] = useState(0)
+  const [foundRegions, setFoundRegions] = useState<TargetId[]>([])
+  const [cameraPermissionError, setCameraPermissionError] = useState('')
+  const [, setValidation] = useState<GlobalValidationResult>(initialValidation)
+  const currentRegion = regionTargets[regionIndex]
+  const currentCopy = currentRegion ? regionCopy[currentRegion.id] : null
   const updateValidation = useCallback((next: GlobalValidationResult) => setValidation((current) => {
     const sameRegions = current.confirmedRegions.length === next.confirmedRegions.length && current.confirmedRegions.every((id) => next.confirmedRegions.includes(id))
     return current.state === next.state && current.fullMapConfirmed === next.fullMapConfirmed && sameRegions ? current : next
   }), [])
-  const confirmed = new Set(validation.confirmedRegions)
+  const handleTargetConfirmed = useCallback((targetId: TargetId) => {
+    if (screen === 'challenge' && targetId === 'colombia-completa') { setRegionIndex(0); setScreen('regions'); return }
+    if (screen !== 'regions' || !currentRegion || targetId !== currentRegion.id) return
+    setFoundRegions((current) => current.includes(targetId) ? current : [...current, targetId])
+    if (regionIndex === regionTargets.length - 1) setScreen('complete')
+    else setRegionIndex((current) => current + 1)
+  }, [currentRegion, regionIndex, screen])
+  const resetGame = () => { setFoundRegions([]); setRegionIndex(0); setValidation(initialValidation); setScreen('home') }
+  const requestCameraPermission = async () => {
+    setCameraPermissionError('')
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraPermissionError('Tu navegador no permite usar la cámara aquí.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      stream.getTracks().forEach((track) => track.stop())
+      setScreen('challenge')
+    } catch (error) {
+      setCameraPermissionError(error instanceof DOMException && error.name === 'NotAllowedError' ? 'Debes permitir la cámara para poder jugar.' : 'No pudimos activar la cámara. Revisa los permisos e inténtalo de nuevo.')
+    }
+  }
+  const activeTargets = screen === 'challenge' ? ['colombia-completa' as TargetId] : screen === 'regions' && currentRegion ? [currentRegion.id] : []
 
-  return <div className="app-shell">
-    <header className="site-header">
-      <a className="brand" href="#inicio" aria-label="Vuela por Colombia, inicio"><span className="brand-mark">✦</span><span>VUELA<br /><b>POR COLOMBIA</b></span></a>
-      <nav aria-label="Navegación principal"><a className="active" href="#inicio">Inicio</a><a href="#descubre">Descubre</a><a href="#regiones">Regiones</a><a href="#como-jugar">Cómo jugar</a></nav>
-      <span className="header-progress" aria-label={`${validation.confirmedRegions.length} de 5 regiones encontradas`}><span>{validation.confirmedRegions.length}</span>/5 regiones</span>
-    </header>
-
-    <main>
-      <section className="welcome-section" id="inicio">
-        <div className="welcome-copy"><p className="reference-kicker">UNA AVENTURA DE REALIDAD AUMENTADA</p><h1>DESCUBRE<br /><em>COLOMBIA!</em></h1><p className="welcome-subtitle">5 REGIONES. 1 SOLO PAÍS.<br /><strong>¿LISTO PARA EXPLORAR?</strong></p><a className="primary-cta" href="#descubre">Comenzar aventura <span>→</span></a></div>
-        <div className="welcome-art" aria-label="Mapa ilustrado de Colombia"><div className="sunburst" /><img src="/assets/targets/full-map.png" alt="Mapa completo de Colombia" /><span className="art-badge badge-caribe">CARIBE</span><span className="art-badge badge-andina">ANDINA</span><span className="art-badge badge-amazonia">AMAZONÍA</span></div>
-      </section>
-
-      <section className="discover-section" id="descubre">
-        <div className="section-heading"><div><p className="reference-kicker">TU MISIÓN</p><h2>ENCUENTRA LAS <em>5 REGIONES!</em></h2></div><span className="mission-count">{validation.confirmedRegions.length} <small>DE 5</small></span></div>
-        <div className="mission-card"><div className="mission-instruction"><span className="mission-icon">⌁</span><div><strong>APUNTA TU CÁMARA</strong><p>Encuentra cada región en el mapa físico para desbloquearla.</p></div></div><a className="secondary-cta" href="#camera">Ir a la cámara <span>↓</span></a></div>
-        <div className="progress-track" role="progressbar" aria-label="Regiones encontradas" aria-valuemin={0} aria-valuemax={5} aria-valuenow={validation.confirmedRegions.length}><span style={{ width: `${validation.confirmedRegions.length * 20}%` }} /></div>
-      </section>
-
-      <section className="camera-section" id="camera"><div className="camera-section-heading"><div><p className="reference-kicker">REALIDAD AUMENTADA</p><h2>EXPLORA CON TU <em>CÁMARA</em></h2><p>Apunta al mapa físico y descubre las regiones en tiempo real.</p></div><span className={`live-pill ${validation.mapRecognized ? 'complete' : ''}`}><span />{validation.mapRecognized ? 'MAPA COMPLETO' : 'CÁMARA LISTA'}</span></div><ArExperience onValidationChange={updateValidation} /></section>
-
-      <section className="regions-section" id="regiones"><div className="section-heading"><div><p className="reference-kicker">TU PROGRESO</p><h2>DESCUBRE LAS <em>5 REGIONES!</em></h2></div><span className="region-count">{validation.confirmedRegions.length}/5</span></div><div className="region-cards">{TARGETS.filter((target) => target.type === 'region').map((target) => { const copy = regionCopy[target.id as keyof typeof regionCopy]; const isFound = confirmed.has(target.id); return <article className={`region-card-large ${copy.color} ${isFound ? 'found' : 'locked'}`} key={target.id}><span className="region-status">{isFound ? 'ENCONTRADA' : 'POR DESCUBRIR'}</span><div className="region-art"><span>✦</span></div><h3>{copy.name}</h3><p>{isFound ? copy.subtitle : 'Apunta tu cámara para descubrirla'}</p><span className="lock-mark" aria-hidden="true">{isFound ? '✓' : '▣'}</span></article> })}</div></section>
-
-      <section className={`completion-section ${validation.mapRecognized ? 'unlocked' : ''}`} id="como-jugar"><div className="completion-map"><img src="/assets/targets/full-map.png" alt="Mapa completo de Colombia" /></div><div><p className="reference-kicker">{validation.mapRecognized ? 'MISIÓN CUMPLIDA' : 'SIGUE EXPLORANDO'}</p><h2>{validation.mapRecognized ? <>COLOMBIA<br /><em>COMPLETA!</em></> : <>TU AVENTURA<br /><em>TE ESPERA</em></>}</h2><p>{validation.mapRecognized ? 'Has reconocido el mapa completo y sus cinco regiones.' : 'Encuentra las cinco regiones y el mapa completo para completar la experiencia.'}</p><span className="completion-status" role="status">{validation.canUnlockGame ? 'Experiencia lista' : 'Cámara activa para comenzar'}</span></div></section>
-
-      <details className="diagnostics"><summary>Developer calibration tools</summary><p>Use this secondary area to inspect still captures and preprocessing. It is not part of the AR tracking flow.</p><AcquisitionWorkspace /></details>
+  return <div className="game-shell">
+    <main className="game-main">
+      {screen === 'home' && <section className="game-screen home-screen" aria-labelledby="game-title"><div className="home-copy"><div className="game-kicker">¡UNA AVENTURA PARA TODOS!</div><h1 id="game-title">¡HAY UN MUNDO <em>POR DESCUBRIR!</em></h1><p className="game-lead strong-lead">🔊 Para disfrutar mejor, activa y sube el volumen.</p><button className="game-primary" onClick={() => setScreen('map')}>¡JUGAR AHORA! <span>🎉</span></button><p className="home-hint"><span>➜</span> Buscá este mapa por la UAP y descubre sus secretos</p></div><div className="home-map"><div className="map-rays" /><img src="/assets/ui/white-map.png" alt="Mapa de Colombia" /><span className="map-searcher" aria-hidden="true">🔍</span><span className="map-sticker">¿DÓNDE ESTÁ? </span></div></section>}
+      {screen === 'map' && <section className="game-screen mission-screen" aria-labelledby="map-title">
+        <button className="back-button" onClick={() => setScreen('home')}>← Volver</button>
+        <div className="game-kicker">ANTES DE EMPEZAR</div>
+        <h1 id="map-title">¿LISTO PARA EL <em>RETO?</em></h1>
+        <p className="game-lead">¡ARMA EL MAPA!</p>
+        <div className="camera-permission-card">
+          <span className="camera-permission-icon" aria-hidden="true">📸</span>
+          <div><strong>PERMISO DE CÁMARA NECESARIO</strong><p>Activa la cámara para detectar el mapa y poder jugar.</p></div>
+          <button className="game-primary" onClick={requestCameraPermission}>Activar cámara para jugar →</button>
+        </div>
+        {cameraPermissionError && <p className="camera-permission-error" role="alert">{cameraPermissionError}</p>}
+        <div className="setup-stack">
+          <div className="setup-preview"><span>BUSCA ESTE MAPA</span><img src="/assets/ui/white-map.png" alt="Mapa dentro del marco" /><span className="map-searcher" aria-hidden="true">🔍</span><b>Mapa dentro del marco ✓</b></div>
+          <div className="setup-card"><span>📸 <b>Apunta la cámara al mapa.</b></span><span>🧩 <b>Pon las piezas dentro del marco.</b></span><span>✅ <b>¡Todo listo para jugar!</b></span></div>
+          <p className="pale-note">🔒 Es seguro: la cámara solo se usa para reconocer el mapa. No guardamos imágenes ni datos personales.</p>
+        </div>
+      </section>}
+      {screen === 'challenge' && <section className="game-screen mission-screen" aria-labelledby="challenge-title"><button className="back-button" onClick={() => setScreen('map')}>← Volver</button><div className="game-kicker">EL GRAN RETO</div><h1 id="challenge-title">¡ARMA EL <em>MAPA!</em></h1><p className="game-lead">¡ENCUENTRA LAS 5 REGIONES! ⛰️</p><ArExperience activeTargetIds={activeTargets} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="Apunta al mapa" description="Activa la cámara para comenzar." startLabel="Activar cámara" showDetails={false} /></section>}
+      {screen === 'regions' && currentRegion && currentCopy && <section className="game-screen mission-screen" aria-labelledby="region-title"><div className="game-kicker">EL GRAN RETO</div><div className="region-progress"><span style={{ width: `${(foundRegions.length / 5) * 100}%` }} /></div><h1 id="region-title">ENCUENTRA <em>{currentCopy.name} {currentCopy.emoji}</em></h1><p className="game-lead strong-lead">REGIÓN {regionIndex + 1} DE 5</p><div className={`current-region-card ${currentCopy.color}`}><img src={`/assets/targets/${({ 'region-caribe': 'caribean-region', 'region-andina': 'andes-region', 'region-pacifica': 'pacific-region', 'region-orinoquia': 'orinoquia-region', 'region-amazonia': 'amazonas-region' } as Record<string, string>)[currentRegion.id]}.png`} alt="" /><div><strong>{currentCopy.name} {currentCopy.emoji}</strong><span>{currentCopy.subtitle}</span></div></div><ArExperience activeTargetIds={activeTargets} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="Apunta la cámara" description="Mantén la región dentro del marco." startLabel="Activar cámara" showDetails={false} /></section>}
+      {screen === 'complete' && <section className="game-screen complete-screen" aria-labelledby="complete-title"><div className="game-kicker">¡QUÉ GRAN EQUIPO! ✨</div><div className="complete-map"><img src="/assets/ui/white-map.png" alt="Mapa completo de Colombia" /><span>🇨🇴</span></div><h1 id="complete-title">¡COLOMBIA <em>COMPLETA!</em> 🇨🇴</h1><p className="game-lead strong-lead">¡LO LOGRASTE!</p><button className="game-primary" onClick={resetGame}>¡DESCUBRIR OTRA VEZ! <span>🎉</span></button></section>}
     </main>
-    <footer><span>✦ VUELA POR COLOMBIA</span><span>Una experiencia para descubrir, aprender y volar.</span></footer>
   </div>
 }
