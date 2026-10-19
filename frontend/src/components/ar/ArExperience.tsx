@@ -5,15 +5,25 @@ import { TARGETS } from '../../types/api'
 import './ar.css'
 
 type TrackStatus = 'not-detected' | 'detected' | 'lost'
+const LABEL_HIDE_GRACE_MS = 250
 
 export function ArExperience() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mindarRef = useRef<MindARThree | null>(null)
+  const hideTimersRef = useRef(new Map<string, number>())
+  const runIdRef = useRef(0)
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
   const [tracking, setTracking] = useState<Record<string, TrackStatus>>(() => Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
 
+  const clearHideTimers = () => {
+    hideTimersRef.current.forEach((timer) => window.clearTimeout(timer))
+    hideTimersRef.current.clear()
+  }
+
   const stop = () => {
+    runIdRef.current += 1
+    clearHideTimers()
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
@@ -27,6 +37,8 @@ export function ArExperience() {
   }
 
   useEffect(() => () => {
+    runIdRef.current += 1
+    clearHideTimers()
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
@@ -47,12 +59,34 @@ export function ArExperience() {
       }
       const instance = new MindARThree({ container: containerRef.current, imageTargetSrc: '/assets/tracking/colombia-targets.mind', maxTrack: 6, uiLoading: 'no', uiScanning: 'no', uiError: 'no' })
       mindarRef.current = instance
+      const runId = runIdRef.current
       TARGETS.forEach((target, index) => {
         const anchor = instance.addCSSAnchor(index)
-        const label = document.createElement('div'); label.className = 'ar-target-label'; label.textContent = target.label
+        const label = document.createElement('div')
+        label.className = 'ar-target-label'
+        label.textContent = target.label
+        label.dataset.targetId = target.id
+        label.style.visibility = 'hidden'
+        label.setAttribute('aria-hidden', 'true')
         const object = new CSS3DObject(label); object.scale.set(0.001, 0.001, 0.001); anchor.group.add(object)
-        anchor.onTargetFound = () => setTargetStatus(index, 'detected')
-        anchor.onTargetLost = () => setTargetStatus(index, 'lost')
+        anchor.onTargetFound = () => {
+          if (runId !== runIdRef.current || mindarRef.current !== instance) return
+          const timer = hideTimersRef.current.get(target.id)
+          if (timer) { window.clearTimeout(timer); hideTimersRef.current.delete(target.id) }
+          label.style.visibility = 'visible'
+          label.setAttribute('aria-hidden', 'false')
+          setTargetStatus(index, 'detected')
+        }
+        anchor.onTargetLost = () => {
+          if (runId !== runIdRef.current || mindarRef.current !== instance) return
+          label.setAttribute('aria-hidden', 'true')
+          setTargetStatus(index, 'lost')
+          const timer = window.setTimeout(() => {
+            if (runId === runIdRef.current && mindarRef.current === instance) label.style.visibility = 'hidden'
+            hideTimersRef.current.delete(target.id)
+          }, LABEL_HIDE_GRACE_MS)
+          hideTimersRef.current.set(target.id, timer)
+        }
       })
       await instance.start()
       const video = containerRef.current.querySelector('video')

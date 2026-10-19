@@ -18,9 +18,13 @@ npm run compile-targets
 
 The compiler uses MindAR's offline compiler with `@napi-rs/canvas` so it can run on the current Node toolchain. It is an explicit build step and is not run during camera startup. The generated file must remain available at `/assets/tracking/colombia-targets.mind`.
 
-The main UI creates one CSS3D anchor per target and attaches a text label to that tracked anchor. `targetFound` changes the target state to detected; `targetLost` changes it to lost and MindAR hides the anchor. The target list is status-only until the engine emits a real event; no detection result is fabricated.
+The main UI creates one CSS3D anchor and one HTML label per target. The label is hidden until that target's real `targetFound` event arrives, so it follows the target anchor instead of being positioned at a fixed screen coordinate. `targetFound` changes the target state to detected and restores the label; `targetLost` changes only that target to lost and schedules defensive label cleanup after a 250 ms grace period. A reacquisition cancels the pending cleanup. MindAR still controls the anchor's own visibility, and the UI does not fabricate confidence or detection results.
+
+Each AR run has a generation identifier. Events from a stopped or replaced MindAR instance are ignored, pending hide timers are cleared, and the rendered container is emptied during camera restart or unmount. This prevents stale labels, duplicate anchors, and one target's loss from affecting another target. The status panel is derived independently from the six stable target IDs and can show multiple detected targets at once when MindAR reports them.
 
 MindAR supports multiple targets with `maxTrack: 6`, but simultaneous stability depends on camera resolution, lighting, target distance, motion, and the visual quality of the physical artwork. The current implementation has not been verified with a physical camera in this environment.
 
 The PNG inspection found six opaque, full-canvas assets with the following dimensions: complete map `1623×2000`, Caribe `1297×1200`, Andina `709×1200`, Pacífica `633×1200`, Orinoquía `1361×1200`, and Amazónica `1399×1200`. These dimensions are metadata only; they do not establish physical scale or camera pose.
+
+Automated tests mock MindAR events and cover label activation, per-target loss, reacquisition, duplicate prevention, and independent multi-target state. Physical-camera tests for frontal, oblique, distance, lighting, occlusion, and rapid reacquisition must still be performed manually with the printed/physical targets. The current implementation has not been verified under all of those conditions in this environment.
 
