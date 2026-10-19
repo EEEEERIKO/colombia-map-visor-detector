@@ -7,6 +7,7 @@ import './ar.css'
 type TrackStatus = 'not-detected' | 'provisional' | 'detected' | 'lost'
 const LABEL_HIDE_GRACE_MS = 250
 const TARGET_CONFIRMATION_MS = 180
+const MINDAR_WARMUP_TOLERANCE = 8
 
 export function ArExperience() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -69,7 +70,7 @@ export function ArExperience() {
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         throw new Error('Camera access requires HTTPS or localhost.')
       }
-      const instance = new MindARThree({ container: containerRef.current, imageTargetSrc: '/assets/tracking/colombia-targets.mind', maxTrack: 6, uiLoading: 'no', uiScanning: 'no', uiError: 'no' })
+      const instance = new MindARThree({ container: containerRef.current, imageTargetSrc: '/assets/tracking/colombia-targets.mind', maxTrack: 6, warmupTolerance: MINDAR_WARMUP_TOLERANCE, uiLoading: 'no', uiScanning: 'no', uiError: 'no' })
       mindarRef.current = instance
       const runId = runIdRef.current
       TARGETS.forEach((target, index) => {
@@ -80,7 +81,7 @@ export function ArExperience() {
         label.dataset.targetId = target.id
         label.style.visibility = 'hidden'
         label.setAttribute('aria-hidden', 'true')
-        const object = new CSS3DObject(label); object.scale.set(0.001, 0.001, 0.001); anchor.group.add(object)
+        const object = new CSS3DObject(label); object.scale.set(1, 1, 1); anchor.group.add(object)
         anchor.onTargetFound = () => {
           if (runId !== runIdRef.current || mindarRef.current !== instance) return
           if (confirmedTargetsRef.current.has(target.id) || confirmationTimersRef.current.has(target.id)) return

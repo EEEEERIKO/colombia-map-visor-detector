@@ -1,6 +1,6 @@
 declare module 'mind-ar/dist/mindar-image-three.prod.js' {
   export class MindARThree {
-    constructor(options: { container: HTMLElement; imageTargetSrc: string; maxTrack?: number; uiLoading?: string; uiScanning?: string; uiError?: string })
+    constructor(options: { container: HTMLElement; imageTargetSrc: string; maxTrack?: number; warmupTolerance?: number; missTolerance?: number; filterMinCF?: number; filterBeta?: number; uiLoading?: string; uiScanning?: string; uiError?: string })
     renderer: { domElement: HTMLElement; setAnimationLoop(callback: (() => void) | null): void; render(scene: unknown, camera: unknown): void; dispose(): void }
     cssRenderer: { render(scene: unknown, camera: unknown): void }
     scene: unknown
