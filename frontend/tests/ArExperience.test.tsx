@@ -79,10 +79,11 @@ describe('ArExperience tracking overlays', () => {
       act(() => instance?.anchors[0].onTargetLost?.())
       const label = document.querySelector('[data-target-id="colombia-completa"]') as HTMLElement
       expect(label).toHaveStyle({ visibility: 'hidden' })
-      expect(screen.getByText('Tracking lost')).toBeInTheDocument()
+      expect(screen.getByText('Brief tracking loss')).toBeInTheDocument()
 
       act(() => { vi.advanceTimersByTime(250) })
       expect(label).toHaveStyle({ visibility: 'hidden' })
+      expect(screen.getByText('Tracking lost')).toBeInTheDocument()
 
       act(() => instance?.anchors[0].onTargetFound?.())
       act(() => { vi.advanceTimersByTime(180) })

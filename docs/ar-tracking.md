@@ -26,6 +26,17 @@ The UI uses a short 180 ms confirmation interval after `targetFound`. During tha
 
 MindAR updates each anchor with a camera-relative transformation matrix through its internal Three.js scene. The repository does not currently contain a common map-coordinate reference frame or expected region geometry. For that reason, `frontend/src/components/ar/placementValidation.ts` provides a tested, generic position/orientation validator for future calibrated data, but the live AR experience does not claim `correctly-placed` or `misplaced`; unavailable reference geometry and pose data resolve to `unknown`.
 
+## Global map validation
+
+`frontend/src/components/ar/globalValidation.ts` derives one typed result from the six per-target states. The five regional IDs are required independently from `colombia-completa`:
+
+- `incomplete`: at least one region is not confirmed.
+- `regions-complete`: all five regions are confirmed, but the complete map is not.
+- `assembly-unknown`: all six targets are recognized, but physical placement cannot be verified.
+- `assembly-valid` / `assembly-invalid`: reserved for reliable future placement evidence.
+
+The result also exposes `mapRecognized` and `canUnlockGame`. The initial unlock policy is recognition-based: all five regions plus the complete-map target must be confirmed. A future policy can require verified assembly by selecting `verified-assembly`; recognition alone then does not unlock the game. A `temporarily-lost` target remains part of confirmed presence during the existing 250 ms loss grace period, while a target that reaches `lost` is removed.
+
 MindAR supports multiple targets with `maxTrack: 6`, but simultaneous stability depends on camera resolution, lighting, target distance, motion, and the visual quality of the physical artwork. The current implementation has not been verified with a physical camera in this environment.
 
 The PNG inspection found six opaque, full-canvas assets with the following dimensions: complete map `1623×2000`, Caribe `1297×1200`, Andina `709×1200`, Pacífica `633×1200`, Orinoquía `1361×1200`, and Amazónica `1399×1200`. These dimensions are metadata only; they do not establish physical scale or camera pose.

@@ -7,6 +7,13 @@
 .ar-view > div { position: absolute !important; z-index: 2 !important; inset: 0; pointer-events: none; }
 .ar-actions { display: flex; gap: 10px; margin: 14px 0; }
 .ar-error { color: #ffb0a9; background: #4d292b; border-radius: 8px; padding: 10px 12px; }
+.global-status { display: grid; gap: 3px; margin: 14px 0; max-width: 900px; padding: 12px 14px; border: 1px solid #39483e; border-radius: 10px; background: #202c26; }
+.global-status strong { color: #edb85f; }
+.global-status span, .global-status small { color: #b9c4ba; }
+.global-status.assembly-valid { border-color: #62c477; }
+.global-status.assembly-valid strong { color: #62c477; }
+.global-status.assembly-invalid { border-color: #8f5350; }
+.global-status.assembly-invalid strong { color: #ffb0a9; }
 .tracking-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; max-width: 900px; }
 .tracking-row { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 9px 11px; border-radius: 8px; background: #202c26; border: 1px solid #39483e; }
 .tracking-row small { grid-column: 2; color: #8e9b90; }

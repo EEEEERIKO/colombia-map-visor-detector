@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 import { TARGETS } from '../../types/api'
+import { deriveGlobalValidation, globalStatusLabel, type TrackingStatus } from './globalValidation'
 import './ar.css'
 
-type TrackStatus = 'not-detected' | 'provisional' | 'detected' | 'lost'
 const LABEL_HIDE_GRACE_MS = 250
 const TARGET_CONFIRMATION_MS = 180
 const MINDAR_WARMUP_TOLERANCE = 8
@@ -18,7 +18,7 @@ export function ArExperience() {
   const runIdRef = useRef(0)
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
-  const [tracking, setTracking] = useState<Record<string, TrackStatus>>(() => Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
+  const [tracking, setTracking] = useState<Record<string, TrackingStatus>>(() => Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
 
   const clearHideTimers = () => {
     hideTimersRef.current.forEach((timer) => window.clearTimeout(timer))
@@ -61,7 +61,7 @@ export function ArExperience() {
     }
   }, [])
 
-  const setTargetStatus = (index: number, status: TrackStatus) => setTracking((current) => ({ ...current, [TARGETS[index].id]: status }))
+  const setTargetStatus = (index: number, status: TrackingStatus) => setTracking((current) => ({ ...current, [TARGETS[index].id]: status }))
 
   const start = async () => {
     if (!containerRef.current) return
@@ -106,9 +106,12 @@ export function ArExperience() {
           if (confirmationTimer) { window.clearTimeout(confirmationTimer); confirmationTimersRef.current.delete(target.id) }
           confirmedTargetsRef.current.delete(target.id)
           label.setAttribute('aria-hidden', 'true')
-          setTargetStatus(index, 'lost')
+          setTargetStatus(index, 'temporarily-lost')
           const timer = window.setTimeout(() => {
-            if (runId === runIdRef.current && mindarRef.current === instance) label.style.visibility = 'hidden'
+            if (runId === runIdRef.current && mindarRef.current === instance) {
+              label.style.visibility = 'hidden'
+              setTargetStatus(index, 'lost')
+            }
             hideTimersRef.current.delete(target.id)
           }, LABEL_HIDE_GRACE_MS)
           hideTimersRef.current.set(target.id, timer)
@@ -131,5 +134,6 @@ export function ArExperience() {
   }
 
   const activeCount = Object.values(tracking).filter((status) => status === 'detected').length
-  return <section className="ar-experience"><div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>Image tracking</h1><p>Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-actions"><button onClick={start} disabled={experienceState === 'starting'}>{experienceState === 'active' ? 'Restart tracking' : 'Start camera'}</button>{experienceState === 'active' && <button className="secondary" onClick={stop}>Stop camera</button>}</div>{error && <p className="ar-error" role="alert">{error}</p>}<div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'provisional' ? 'Confirming target' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></section>
+  const globalValidation = deriveGlobalValidation(tracking)
+  return <section className="ar-experience"><div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>Image tracking</h1><p>Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-actions"><button onClick={start} disabled={experienceState === 'starting'}>{experienceState === 'active' ? 'Restart tracking' : 'Start camera'}</button>{experienceState === 'active' && <button className="secondary" onClick={stop}>Stop camera</button>}</div>{error && <p className="ar-error" role="alert">{error}</p>}<section className={`global-status ${globalValidation.state}`} aria-live="polite"><strong>{globalStatusLabel[globalValidation.state]}</strong><span>{globalValidation.confirmedRegions.length}/5 regions confirmed{globalValidation.fullMapConfirmed ? ' · complete map confirmed' : ''}</span>{globalValidation.mapRecognized && globalValidation.assemblyStatus === 'unknown' && <small>Recognition is complete; physical assembly remains unknown.</small>}</section><div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'provisional' ? 'Confirming target' : tracking[target.id] === 'temporarily-lost' ? 'Brief tracking loss' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></section>
 }
