@@ -22,6 +22,10 @@ The main UI creates one CSS3D anchor and one HTML label per target. The label is
 
 Each AR run has a generation identifier. Events from a stopped or replaced MindAR instance are ignored, pending hide timers are cleared, and the rendered container is emptied during camera restart or unmount. This prevents stale labels, duplicate anchors, and one target's loss from affecting another target. The status panel is derived independently from the six stable target IDs and can show multiple detected targets at once when MindAR reports them.
 
+The UI uses a short 180 ms confirmation interval after `targetFound`. During that interval the target is `provisional` and its overlay remains hidden; a loss cancels confirmation. This filters brief event noise but cannot guarantee protection against a persistent visual false positive. MindAR 1.2.5 does not expose a public confidence score in this integration, so no synthetic confidence value is displayed.
+
+MindAR updates each anchor with a camera-relative transformation matrix through its internal Three.js scene. The repository does not currently contain a common map-coordinate reference frame or expected region geometry. For that reason, `frontend/src/components/ar/placementValidation.ts` provides a tested, generic position/orientation validator for future calibrated data, but the live AR experience does not claim `correctly-placed` or `misplaced`; unavailable reference geometry and pose data resolve to `unknown`.
+
 MindAR supports multiple targets with `maxTrack: 6`, but simultaneous stability depends on camera resolution, lighting, target distance, motion, and the visual quality of the physical artwork. The current implementation has not been verified with a physical camera in this environment.
 
 The PNG inspection found six opaque, full-canvas assets with the following dimensions: complete map `1623×2000`, Caribe `1297×1200`, Andina `709×1200`, Pacífica `633×1200`, Orinoquía `1361×1200`, and Amazónica `1399×1200`. These dimensions are metadata only; they do not establish physical scale or camera pose.
