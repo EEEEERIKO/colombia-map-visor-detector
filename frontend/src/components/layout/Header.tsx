@@ -1,0 +1,2 @@
+export function Header({ backendStatus = 'checking' }: { backendStatus?: 'checking' | 'connected' | 'offline' }) { return <header><p className="eyebrow">Vuela por Colombia · calibration tool</p><h1>Colombia Map Vision Detector</h1><h2>Camera Calibration</h2><p>Capture and prepare images of the physical map before region detection is implemented.</p><p className="connection-status">Backend: {backendStatus === 'checking' ? 'checking…' : backendStatus}</p></header> }
+
