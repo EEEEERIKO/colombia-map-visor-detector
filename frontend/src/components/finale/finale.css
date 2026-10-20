@@ -18,3 +18,88 @@
 .finale-photo-frame.finale-carousel-photo.has-photo img:first-child{display:block;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center center!important}.finale-flip-front .finale-photo-frame.has-photo img:first-child{display:block;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center center!important;background:#071b22}
 .finale-flip-front .finale-region-photo,.finale-flip-front .finale-discovery-background,.finale-flip-front .finale-discovery-photo,.finale-carousel-photo{display:flex!important;align-items:center;justify-content:center}.finale-flip-front .finale-photo-frame.has-photo img:first-child,.finale-photo-frame.finale-carousel-photo.has-photo img:first-child{position:static!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important}
 @media(max-width:600px){.finale-modal-backdrop{padding:10px}.finale-modal{width:100%;height:min(92vh,720px);border-width:3px;border-radius:18px}.finale-modal-heading{padding:22px 58px 14px 17px}.finale-modal-heading h2{font-size:2rem}.finale-modal-heading p{font-size:.78rem}.finale-modal-close{top:9px;right:9px;width:36px;height:36px;font-size:1.45rem}.finale-modal .finale-carousel-copy{padding:54px 16px 14px}}
+
+/* Final responsive pass: keep the finale readable on narrow screens and let
+   card covers fill their frame. The gallery modal keeps contain behavior so
+   portrait photos remain complete, while the card covers use cover. */
+.finale-flip-front .finale-photo-frame.has-photo img:first-child,
+.finale-flip-front .finale-discovery-photo.has-photo img:first-child { object-fit:cover!important; object-position:center!important; }
+.finale-flip-front .finale-region-photo,
+.finale-flip-front .finale-discovery-background,
+.finale-flip-front .finale-discovery-photo { background:#071b22; }
+
+@media(max-width:850px){
+  .finale-reveal { min-height:100svh; padding:clamp(72px,12vh,110px) 22px 44px; }
+  .finale-reveal-copy { width:min(100%,560px); }
+  .finale-reveal h1 { font-size:clamp(4rem,16vw,6.4rem); line-height:.82; }
+  .finale-intro { margin-top:20px; }
+  .finale-regions,
+  .finale-discoveries { padding-top:76px; padding-bottom:84px; }
+  .finale-section-heading { margin-bottom:28px; }
+  .finale-story-grid { gap:18px; }
+  .finale-story,
+  .finale-story-1,
+  .finale-story-2,
+  .finale-story-3,
+  .finale-story-4,
+  .finale-story-5 { grid-column:1 / -1; min-height:300px; }
+  .finale-flip-card,
+  .finale-flip-face { min-height:300px; }
+  .finale-flip-front .finale-story-copy { padding:20px 18px; }
+  .finale-flip-front p { max-width:32rem; }
+  .finale-discovery-grid { gap:16px; }
+  .finale-discovery-card,
+  .finale-discovery-card .finale-flip-card,
+  .finale-discovery-card .finale-flip-inner,
+  .finale-discovery-card .finale-flip-face { min-height:235px; }
+}
+
+@media(max-width:600px){
+  .finale-reveal { padding:70px 16px 34px; }
+  .finale-kicker { font-size:.62rem; padding:7px 10px; }
+  .finale-overline { margin-top:20px; font-size:.84rem; }
+  .finale-reveal h1 { font-size:clamp(3.55rem,18vw,5.25rem); }
+  .finale-intro { max-width:290px; margin-top:18px; font-size:.9rem; }
+  .finale-continue { min-height:48px; padding:10px 16px; }
+  .finale-regions,
+  .finale-discoveries { padding-inline:16px; }
+  .finale-section-heading h2 { font-size:clamp(2.45rem,13vw,4rem); }
+  .finale-section-heading p { margin-top:12px; font-size:.9rem; }
+  .finale-story { min-height:285px; }
+  .finale-flip-card,
+  .finale-flip-face { min-height:285px; }
+  .finale-flip-front .finale-story-copy { padding:17px 15px; }
+  .finale-story h3 { font-size:clamp(1.65rem,9vw,2.2rem); }
+  .finale-story strong { max-width:82%; font-size:.92rem; }
+  .finale-story p { max-width:90%; margin:7px 0 0; font-size:.72rem; }
+  .finale-flip-hint { right:10px; top:10px; padding:6px 8px; font-size:.58rem; }
+  .finale-discoveries .finale-section-heading { margin-left:0; }
+  .finale-discovery-grid { grid-template-columns:1fr; gap:14px; }
+  .finale-discovery-card,
+  .finale-discovery-card .finale-flip-card,
+  .finale-discovery-card .finale-flip-inner,
+  .finale-discovery-card .finale-flip-face { min-height:220px; }
+  .finale-discovery-card .finale-flip-front { padding:16px; }
+  .finale-discovery-card strong { margin-top:54px; font-size:1.35rem; }
+  .finale-discovery-top>img { width:40px; height:40px; }
+  .finale-invitation { min-height:460px; padding:78px 16px; }
+  .finale-invitation h2 { font-size:clamp(2.7rem,14vw,4.4rem); }
+  .finale-invitation>img { right:-10%; top:2%; width:220px; }
+  .finale-actions { width:100%; }
+  .finale-actions .game-primary,
+  .finale-secondary { width:100%; min-height:48px; }
+
+  .finale-modal-backdrop { padding:8px; }
+  .finale-modal { width:100%; height:min(94svh,760px); max-height:94svh; border-width:3px; border-radius:18px; }
+  .finale-modal-heading { padding:19px 54px 13px 15px; }
+  .finale-modal-heading>span { font-size:.6rem; }
+  .finale-modal-heading h2 { margin-top:5px; font-size:clamp(1.65rem,9vw,2.35rem); }
+  .finale-modal-heading strong { font-size:.87rem; }
+  .finale-modal-heading p { display:-webkit-box; overflow:hidden; margin-top:6px; font-size:.74rem; line-height:1.25; -webkit-box-orient:vertical; -webkit-line-clamp:3; }
+  .finale-modal-close { top:8px; right:8px; width:34px; height:34px; border-width:2px; font-size:1.3rem; }
+  .finale-modal .finale-photo-carousel { min-height:0; }
+  .finale-modal .finale-carousel-photo { min-height:0!important; }
+  .finale-modal .finale-carousel-copy { padding:11px 15px 14px!important; }
+  .finale-modal .finale-carousel-copy p { min-height:32px; margin:4px 0 8px; font-size:.78rem; }
+  .finale-modal .finale-carousel-controls button { width:38px; height:32px; }
+}

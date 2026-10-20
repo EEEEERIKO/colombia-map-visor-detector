@@ -153,10 +153,12 @@ type ArExperienceProps = {
   anchoredScan?: boolean
   anchoredScanImage?: string
   cameraStream?: MediaStream
+  paused?: boolean
+  disabled?: boolean
   showDetails?: boolean
 }
 
-export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFound, onTargetLost, activeTargetIds = TARGETS.map((target) => target.id), anchorTargetIds = activeTargetIds, heading = 'Image tracking', description = 'Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.', autoStart = false, confirmationDurationMs = TARGET_CONFIRMATION_MS, cameraOverlay, anchoredScan = false, cameraStream, showDetails = true }: ArExperienceProps) {
+export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFound, onTargetLost, activeTargetIds = TARGETS.map((target) => target.id), anchorTargetIds = activeTargetIds, heading = 'Image tracking', description = 'Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.', autoStart = false, confirmationDurationMs = TARGET_CONFIRMATION_MS, cameraOverlay, anchoredScan = false, cameraStream, paused = false, disabled = false, showDetails = true }: ArExperienceProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mindarRef = useRef<MindARThree | null>(null)
   const hideTimersRef = useRef(new Map<string, number>())
@@ -172,6 +174,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
   const scanElementsRef = useRef(new Map<TargetId, HTMLDivElement>())
   const highlightElementsRef = useRef(new Map<TargetId, HTMLDivElement>())
   const particleSystemsRef = useRef(new Map<TargetId, AnchoredParticleSystem>())
+  const animationLoopRef = useRef<(() => void) | null>(null)
   const elapsedRef = useRef(0)
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
@@ -235,6 +238,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
+      animationLoopRef.current = null
       try { instance.stop() } catch { /* MindAR may not have started its video yet. */ }
       instance.renderer.dispose()
       mindarRef.current = null
@@ -257,6 +261,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
+      animationLoopRef.current = null
       try { instance.stop() } catch { /* MindAR may not have started its video yet. */ }
       instance.renderer.dispose()
       mindarRef.current = null
@@ -461,7 +466,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       const video = containerRef.current.querySelector('video')
       if (video) { video.muted = true; video.playsInline = true; video.style.zIndex = '0' }
       let previousTime = performance.now()
-      instance.renderer.setAnimationLoop(() => {
+      animationLoopRef.current = () => {
         const now = performance.now()
         const delta = Math.min(.05, Math.max(0, (now - previousTime) / 1000))
         previousTime = now
@@ -469,7 +474,8 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
         particleSystemsRef.current.forEach((particles) => particles.update(delta, elapsedRef.current))
         instance.renderer.render(instance.scene, instance.camera)
         instance.cssRenderer.render(instance.cssScene, instance.camera)
-      })
+      }
+      instance.renderer.setAnimationLoop(animationLoopRef.current)
       debugAr('renderer:loop-installed', { particleSystems: particleSystemsRef.current.size, canvas: Boolean(instance.renderer.domElement), cssScene: Boolean(instance.cssScene) })
       setExperienceState('active')
     } catch (cause) {
@@ -485,7 +491,25 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
   startRef.current = start
   useEffect(() => { onValidationChange?.(globalValidation) }, [globalValidation, onValidationChange])
   useEffect(() => {
-    if (autoStart) void startRef.current()
-  }, [autoStart])
-  return <section className="ar-experience">{(heading || description) && <div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>{heading}</h1><p>{description}</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div>}<div className="ar-view-shell"><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-camera-overlay">{cameraOverlay}</div></div>{error && <p className="ar-error" role="alert">{error}</p>}{showDetails && <><section className={`global-status ${globalValidation.state}`} aria-live="polite"><strong>{globalStatusLabel[globalValidation.state]}</strong><span>{globalValidation.confirmedRegions.length}/5 regions confirmed{globalValidation.fullMapConfirmed ? ' · complete map confirmed' : ''}</span>{globalValidation.mapRecognized && globalValidation.assemblyStatus === 'unknown' && <small>Recognition is complete; physical assembly remains unknown.</small>}</section><div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'provisional' ? 'Confirming target' : tracking[target.id] === 'temporarily-lost' ? 'Brief tracking loss' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></>}</section>
+    if (autoStart && !disabled) void startRef.current()
+  }, [autoStart, disabled])
+  useEffect(() => {
+    if (disabled) stop()
+  }, [disabled])
+  useEffect(() => {
+    const instance = mindarRef.current
+    const video = containerRef.current?.querySelector('video')
+    if (!instance || !video || experienceState !== 'active') return
+    if (paused) {
+      video.pause()
+      instance.renderer.setAnimationLoop(null)
+      debugAr('session:paused-for-discovery')
+      return
+    }
+    void video.play().then(() => {
+      if (mindarRef.current === instance && animationLoopRef.current) instance.renderer.setAnimationLoop(animationLoopRef.current)
+      debugAr('session:resumed-after-discovery')
+    }).catch((cause) => debugAr('session:resume-failed', cause))
+  }, [paused, experienceState])
+  return <section className={`ar-experience ${paused ? 'is-paused' : ''}`}>{(heading || description) && <div className="ar-header"><div><p className="eyebrow">Vuela por Colombia</p><h1>{heading}</h1><p>{description}</p></div><span className={`camera-state ${experienceState}`}>{experienceState === 'active' ? `${activeCount} tracked` : experienceState}</span></div>}<div className="ar-view-shell"><div ref={containerRef} className="ar-view" aria-label="AR camera view" /><div className="ar-camera-overlay">{cameraOverlay}</div></div>{error && <p className="ar-error" role="alert">{error}</p>}{showDetails && <><section className={`global-status ${globalValidation.state}`} aria-live="polite"><strong>{globalStatusLabel[globalValidation.state]}</strong><span>{globalValidation.confirmedRegions.length}/5 regions confirmed{globalValidation.fullMapConfirmed ? ' · complete map confirmed' : ''}</span>{globalValidation.mapRecognized && globalValidation.assemblyStatus === 'unknown' && <small>Recognition is complete; physical assembly remains unknown.</small>}</section><div className="tracking-status" aria-label="Target tracking status">{TARGETS.map((target) => <div key={target.id} className={`tracking-row ${tracking[target.id]}`}><span className="status-dot" /><span>{target.label}</span><small>{tracking[target.id] === 'detected' ? 'Detected and tracked' : tracking[target.id] === 'provisional' ? 'Confirming target' : tracking[target.id] === 'temporarily-lost' ? 'Brief tracking loss' : tracking[target.id] === 'lost' ? 'Tracking lost' : 'Not detected'}</small></div>)}</div></>}</section>
 }

@@ -55,6 +55,7 @@ export default function App() {
   const [foundRegions, setFoundRegions] = useState<TargetId[]>([])
   const [discoveryTargetId, setDiscoveryTargetId] = useState<RegionalTargetId | null>(null)
   const [mapDiscoveryOpen, setMapDiscoveryOpen] = useState(false)
+  const [quizTransitioning, setQuizTransitioning] = useState(false)
   const [cameraPermissionError, setCameraPermissionError] = useState('')
   const [cameraPermissionBlocked, setCameraPermissionBlocked] = useState(false)
   const [cameraPreviewStream, setCameraPreviewStream] = useState<MediaStream | null>(null)
@@ -105,28 +106,40 @@ export default function App() {
   const continueFromMapDiscovery = () => {
     debugApp('map-discovery-continue', { screen, mapDiscoveryOpen, cameraStillMounted: true })
     setMapDiscoveryOpen(false)
+    setQuizTransitioning(false)
     setRegionIndex(0)
     setCloudTransition('idle')
     setScreen('regions')
   }
+  const stopCameraForQuiz = () => {
+    cameraPreviewStream?.getTracks().forEach((track) => track.stop())
+    setCameraPreviewStream(null)
+  }
   const continueFromDiscovery = () => {
     setDiscoveryTargetId(null)
     if (regionIndex === regionTargets.length - 1) {
+      setQuizTransitioning(true)
+      stopCameraForQuiz()
       transitionTo('quiz')
       return
     }
     setRegionIndex((current) => current + 1)
   }
-  const resetGame = () => { cameraPreviewStream?.getTracks().forEach((track) => track.stop()); setCameraPreviewStream(null); setFoundRegions([]); setDiscoveryTargetId(null); setMapDiscoveryOpen(false); setRegionIndex(0); setQuizLetters(Array(COUNTRY_ANSWER.length).fill('')); setQuizHintCount(0); setQuizMessage(''); setValidation(initialValidation); transitionTo('home') }
+  const resetGame = () => { cameraPreviewStream?.getTracks().forEach((track) => track.stop()); setCameraPreviewStream(null); setFoundRegions([]); setDiscoveryTargetId(null); setMapDiscoveryOpen(false); setQuizTransitioning(false); setRegionIndex(0); setQuizLetters(Array(COUNTRY_ANSWER.length).fill('')); setQuizHintCount(0); setQuizMessage(''); setValidation(initialValidation); transitionTo('home') }
   const leaveCameraFor = (nextScreen: Screen) => {
     cameraPreviewStream?.getTracks().forEach((track) => track.stop())
     setCameraPreviewStream(null)
     setMapDiscoveryOpen(false)
     setDiscoveryTargetId(null)
+    setQuizTransitioning(false)
     transitionTo(nextScreen)
   }
   const continueFromRegionInfo = () => {
-    if (regionIndex === regionTargets.length - 1) transitionTo('quiz')
+    if (regionIndex === regionTargets.length - 1) {
+      setQuizTransitioning(true)
+      stopCameraForQuiz()
+      transitionTo('quiz')
+    }
     else runCloudTransition(() => {
       setRegionIndex((current) => current + 1)
       setScreen('regions')
@@ -185,7 +198,7 @@ export default function App() {
   const allArTargetIds: TargetId[] = ['colombia-completa', ...regionalTargetIds]
   const isArScreen = screen === 'challenge' || screen === 'regions' || screen === 'quiz' || screen === 'complete'
   const isRegionSearch = screen === 'regions' && Boolean(currentRegion && currentCopy)
-  const arDiscoveryOpen = mapDiscoveryOpen || Boolean(discoveryTargetId) || screen === 'quiz' || screen === 'complete'
+  const arDiscoveryOpen = mapDiscoveryOpen || Boolean(discoveryTargetId) || quizTransitioning || screen === 'quiz' || screen === 'complete'
   const discoveryCopy = discoveryTargetId ? regionCopy[discoveryTargetId] : null
 
   return <div className={`game-shell ${isArScreen ? 'ar-game-shell' : ''}`}>
@@ -213,7 +226,7 @@ export default function App() {
       </section>}
       {isArScreen && <section className={`game-screen mission-screen ar-fullscreen-screen ${arDiscoveryOpen ? 'discovery-open' : ''}`} aria-labelledby={isRegionSearch ? 'region-title' : 'challenge-title'}>
         <h1 id={isRegionSearch ? 'region-title' : 'challenge-title'} className="sr-only">{isRegionSearch ? `¡Encontremos la ${regionOrdinals[regionIndex].toLowerCase()} región!` : '¡Encuentra este mapa!'}</h1>
-        <ArExperience activeTargetIds={activeTargets} anchorTargetIds={allArTargetIds} cameraStream={cameraPreviewStream ?? undefined} onTargetFound={(targetId) => { debugApp('target-found-callback', { targetId, screen }) }} onTargetLost={(targetId) => { debugApp('target-lost-callback', { targetId, screen }) }} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} cameraOverlay={null} anchoredScan={screen === 'challenge' || isRegionSearch} anchoredScanImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : '/assets/ui/white-map.png'} autoStart showDetails={false} />
+        <ArExperience activeTargetIds={activeTargets} anchorTargetIds={allArTargetIds} cameraStream={cameraPreviewStream ?? undefined} paused={arDiscoveryOpen} disabled={quizTransitioning || screen === 'quiz' || screen === 'complete'} onTargetFound={(targetId) => { debugApp('target-found-callback', { targetId, screen }) }} onTargetLost={(targetId) => { debugApp('target-lost-callback', { targetId, screen }) }} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} cameraOverlay={null} anchoredScan={screen === 'challenge' || isRegionSearch} anchoredScanImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : '/assets/ui/white-map.png'} autoStart showDetails={false} />
         {(screen === 'challenge' || screen === 'regions') && <div className="ar-top-overlay"><RegionProgressOverlay foundRegions={foundRegions} /></div>}
         <CameraGuidanceOverlay referenceImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : whiteMap} discoveryOpen={arDiscoveryOpen} message={screen === 'challenge' ? '¡ACERCA TU CÁMARA AL MAPA!' : currentCopy?.clue ?? 'Estamos preparando el próximo descubrimiento.'} />
         {isRegionSearch && currentRegion && <div className="ar-region-guide-overlay">
@@ -224,10 +237,10 @@ export default function App() {
         {discoveryCopy && <DiscoveryExperience copy={discoveryCopy} onContinue={continueFromDiscovery} />}
         {screen === 'quiz' && <aside className="ar-discovery-card ar-quiz-card" aria-live="polite"><div className="ar-discovery-kicker">¡5 REGIONES DESCUBIERTAS! <img className="inline-icon" src={iconPath('estrella-logro.svg')} alt="" /></div><h2>¿CÓMO SE LLAMA ESTE PAÍS?</h2><p>Cinco regiones extraordinarias. Una tierra llena de vida, historias y contrastes.</p><div className="quiz-letters" aria-label="Escribe el nombre del país">{COUNTRY_ANSWER.split('').map((_, index) => <input key={index} ref={(element) => { quizInputRefs.current[index] = element }} className={index < quizHintCount ? 'hint-letter' : ''} aria-label={`Letra ${index + 1} de 7`} maxLength={1} readOnly={index < quizHintCount} value={quizLetters[index]} onChange={(event) => handleQuizLetterChange(index, event.target.value)} onKeyDown={(event) => handleQuizKeyDown(index, event)} autoFocus={index === quizHintCount} />)}</div>{quizMessage && <p className="quiz-message" role="status"><img className="inline-icon" src={iconPath('pista.svg')} alt="" /> {quizMessage}</p>}<button className="game-primary" onClick={checkCountryAnswer}>COMPROBAR <img className="button-icon" src={iconPath('flecha-continuar.svg')} alt="" /></button></aside>}
         {screen === 'complete' && <aside className="ar-discovery-card ar-final-card" aria-live="polite"><div className="ar-discovery-kicker">¡QUÉ GRAN EQUIPO! <img className="inline-icon" src={iconPath('celebracion-final.svg')} alt="" /></div><img src={whiteMap} alt="Mapa completo de Colombia" /><h2>¡LO DESCUBRISTE!</h2><p><strong>¡ESTO ES COLOMBIA!</strong><br />Cinco regiones extraordinarias. Una tierra llena de vida, historias y contrastes.</p><button className="game-primary" onClick={resetGame}>¡DESCUBRIR OTRA VEZ! <img className="button-icon" src={iconPath('repetir.svg')} alt="" /></button></aside>}
-        <button className="ar-back-button" aria-label={isRegionSearch ? 'Volver a buscar el mapa completo' : 'Volver a los permisos de cámara'} onClick={() => { if (screen === 'quiz' || screen === 'complete') { transitionTo('regions'); return } if (isRegionSearch) { transitionTo('challenge'); return } transitionTo('map') }}><img src={iconPath('flecha-atras.svg')} alt="" /></button>
+        <button className="ar-back-button" aria-label={isRegionSearch ? 'Volver a buscar el mapa completo' : 'Volver a los permisos de cámara'} onClick={() => { if (screen === 'quiz' || screen === 'complete') { setQuizTransitioning(false); transitionTo('regions'); return } if (isRegionSearch) { transitionTo('challenge'); return } transitionTo('map') }}><img src={iconPath('flecha-atras.svg')} alt="" /></button>
       </section>}
       {screen === 'regionInfo' && currentRegion && currentCopy && <section className="game-screen discovery-screen" aria-labelledby="region-info-title"><div className={`region-info-map ${currentCopy.color}`}><img src={regionReferenceAssets[currentRegion.id]} alt={`Mapa de la región ${currentCopy.name}`} /></div><div className="game-kicker">¡REGIÓN ENCONTRADA! <img className="inline-icon" src={iconPath('region-detectada.svg')} alt="" /></div><p className="game-lead strong-lead">Descubriste la región {regionIndex + 1} de 5</p><h1 id="region-info-title"><em>{currentCopy.name} <img className="title-icon" src={currentCopy.icon} alt="" /></em></h1><p className="region-fact">{currentCopy.fact}</p><p className="region-subtitle">{currentCopy.subtitle}</p><button className="game-primary" onClick={continueFromRegionInfo}>{regionIndex === regionTargets.length - 1 ? '¡VER RESULTADO FINAL!' : '¡BUSCAR LA SIGUIENTE REGIÓN!'} <img className="button-icon" src={iconPath('flecha-continuar.svg')} alt="" /></button></section>}
-      {screen === 'finale' && <FinalExperience onPlay={resetGame} onExploreMap={() => leaveCameraFor('map')} />}
+      {screen === 'finale' && <FinalExperience onExploreMap={() => leaveCameraFor('map')} />}
     </main>
   </div>
 }

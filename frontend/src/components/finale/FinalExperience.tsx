@@ -42,7 +42,7 @@ function DiscoveryModal({ region, discovery, onClose }: { region?: FinaleRegion;
   return <div className="finale-modal-backdrop" role="presentation" onClick={onClose}><section className="finale-modal" role="dialog" aria-modal="true" aria-labelledby="finale-modal-title" onClick={(event) => event.stopPropagation()}><button className="finale-modal-close" type="button" onClick={onClose} aria-label="Cerrar galería">×</button><div className="finale-modal-heading"><span>{region ? 'REGIÓN DESCUBIERTA' : 'CUADERNO DE VIAJE'}</span><h2 id="finale-modal-title">{title} {icon && <img src={icon} alt="" />}</h2><strong>{subtitle}</strong><p>{description}</p></div><PhotoCarousel photos={photos} /></section></div>
 }
 
-export function FinalExperience({ onPlay, onExploreMap }: { onPlay: () => void; onExploreMap: () => void }) {
+export function FinalExperience({ onExploreMap }: { onExploreMap: () => void }) {
   const [revealReady, setRevealReady] = useState(false)
   const [skippedReveal, setSkippedReveal] = useState(false)
   const [modal, setModal] = useState<{ region?: FinaleRegion; discovery?: FinaleDiscovery } | null>(null)
@@ -75,6 +75,6 @@ export function FinalExperience({ onPlay, onExploreMap }: { onPlay: () => void; 
 
     {modal && <DiscoveryModal region={modal.region} discovery={modal.discovery} onClose={() => setModal(null)} />}
 
-    <section className="finale-invitation" aria-labelledby="invitation-title"><img src="/assets/ui/white-map.png" alt="" aria-hidden="true" /><span className="finale-kicker">LA AVENTURA SIGUE</span><h2 id="invitation-title">Ya viste el mapa.<br /><em>Ahora vívelo.</em></h2><p>Tu próxima misión empieza aquí.</p><div className="finale-actions"><button className="game-primary" onClick={onPlay}>¡JUGAR AHORA! →</button><button className="finale-secondary" onClick={onExploreMap}>Volver al mapa</button></div></section>
+    <section className="finale-invitation" aria-labelledby="invitation-title"><img src="/assets/ui/white-map.png" alt="" aria-hidden="true" /><span className="finale-kicker">LA AVENTURA SIGUE</span><h2 id="invitation-title">Ya viste el mapa.<br /><em>Ahora vuélalo.</em></h2><p>Tu próxima misión.</p><div className="finale-actions"><button className="game-primary" onClick={() => window.open('https://vuela-por-colombia.vercel.app', '_blank', 'noopener,noreferrer')}>¡JUGAR AHORA! →</button><button className="finale-secondary" onClick={onExploreMap}>Volver al mapa</button></div></section>
   </div>
 }
