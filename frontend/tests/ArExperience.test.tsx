@@ -61,6 +61,9 @@ describe('ArExperience tracking overlays', () => {
       const label = document.querySelector('[data-target-id="region-caribe"]') as HTMLElement
       expect(label).toHaveStyle({ visibility: 'visible' })
       expect(label).toHaveAttribute('data-target-id', 'region-caribe')
+      const highlight = document.querySelector('.ar-target-highlight[data-target-id="region-caribe"]') as HTMLElement
+      expect(highlight).toHaveStyle({ visibility: 'visible' })
+      expect(highlight).toHaveClass('is-confirmed')
     } finally {
       vi.useRealTimers()
     }

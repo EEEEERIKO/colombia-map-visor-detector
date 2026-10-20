@@ -33,7 +33,27 @@ function RegionProgressOverlay({ foundRegions }: { foundRegions: TargetId[] }) {
 }
 
 function DiscoveryCard({ copy, onContinue }: { copy: typeof regionCopy[string]; onContinue: () => void }) {
-  return <aside className="ar-discovery-card" aria-live="polite"><div className="ar-discovery-kicker">¡NUEVO DESCUBRIMIENTO! {copy.emoji}</div><h2>{copy.discoveryTitle}</h2><p>{copy.discoveryBody}</p><button className="game-primary" onClick={onContinue}>¡SIGAMOS! →</button></aside>
+  return <aside className="ar-discovery-card" aria-live="polite"><div className="ar-discovery-kicker">¡NUEVO DESCUBRIMIENTO! {copy.emoji}</div><h2>{copy.discoveryTitle}</h2><p>{copy.discoveryBody}</p><button className="game-primary" onClick={onContinue}>¡CONTINUAR! →</button></aside>
+}
+
+function MapDiscoveryCard({ onContinue }: { onContinue: () => void }) {
+  return <aside className="ar-map-discovery-card" aria-live="polite" aria-label="Descubrimiento del mapa completo">
+    <div className="ar-map-discovery-track">
+      <div className="ar-map-discovery-slide ar-map-discovery-map"><img src={whiteMap} alt="Mapa completo de Colombia" /><span>✓</span><small>Desliza para descubrir más →</small></div>
+      <div className="ar-map-discovery-slide ar-map-discovery-copy"><div className="ar-discovery-kicker">¡MAPA ENCONTRADO! 🎉</div><h2>¡FELICIDADES!</h2><p>Encontraste el mapa. Ahora comienza la aventura explorando sus regiones.</p><strong>Desliza para volver al mapa</strong></div>
+    </div>
+    <button className="game-primary" onClick={onContinue}>¡COMENZAR A EXPLORAR! →</button>
+  </aside>
+}
+
+function CameraGuidanceOverlay({ referenceImage, discoveryOpen }: { referenceImage: string; discoveryOpen: boolean }) {
+  return <>
+    <div className={`ar-camera-guidance ${discoveryOpen ? 'is-hidden' : ''}`} aria-live="polite">
+      <div className="ar-guidance-label"><img src={referenceImage} alt="" /><strong>¡ACERCA TU CÁMARA AL MAPA!</strong></div>
+      <div className="ar-scanning-frame" aria-hidden="true"><span /><span /><span /><span /><i /></div>
+      <div className="ar-scanning-status"><span aria-hidden="true">⌕</span><span>Estamos buscando nuevos lugares...</span></div>
+    </div>
+  </>
 }
 
 export default function App() {
@@ -41,6 +61,7 @@ export default function App() {
   const [regionIndex, setRegionIndex] = useState(0)
   const [foundRegions, setFoundRegions] = useState<TargetId[]>([])
   const [discoveryTargetId, setDiscoveryTargetId] = useState<RegionalTargetId | null>(null)
+  const [mapDiscoveryOpen, setMapDiscoveryOpen] = useState(false)
   const [cameraPermissionError, setCameraPermissionError] = useState('')
   const [cameraPermissionBlocked, setCameraPermissionBlocked] = useState(false)
   const [mapDetected, setMapDetected] = useState(false)
@@ -82,17 +103,26 @@ export default function App() {
     return current.state === next.state && current.fullMapConfirmed === next.fullMapConfirmed && sameRegions ? current : next
   }), [])
   const handleTargetConfirmed = useCallback((targetId: TargetId) => {
-    if (screen === 'challenge' && targetId === 'colombia-completa') { setRegionIndex(0); transitionTo('mapSuccess'); return }
+    if (screen === 'challenge' && targetId === 'colombia-completa') { setMapDiscoveryOpen(true); return }
     if (screen !== 'regions' || !currentRegion || targetId !== currentRegion.id) return
     if (foundRegions.includes(targetId)) return
     setFoundRegions((current) => current.includes(targetId) ? current : [...current, targetId])
     setDiscoveryTargetId(targetId as RegionalTargetId)
-  }, [currentRegion, foundRegions, screen, transitionTo])
+  }, [currentRegion, foundRegions, screen])
+  const continueFromMapDiscovery = () => {
+    setMapDiscoveryOpen(false)
+    setRegionIndex(0)
+    transitionTo('regions')
+  }
   const continueFromDiscovery = () => {
     setDiscoveryTargetId(null)
-    transitionTo('regionInfo')
+    if (regionIndex === regionTargets.length - 1) {
+      transitionTo('quiz')
+      return
+    }
+    setRegionIndex((current) => current + 1)
   }
-  const resetGame = () => { cameraPreviewStream?.getTracks().forEach((track) => track.stop()); setCameraPreviewStream(null); setFoundRegions([]); setDiscoveryTargetId(null); setRegionIndex(0); setMapDetected(false); setQuizLetters(Array(COUNTRY_ANSWER.length).fill('')); setQuizHintCount(0); setQuizMessage(''); setValidation(initialValidation); transitionTo('home') }
+  const resetGame = () => { cameraPreviewStream?.getTracks().forEach((track) => track.stop()); setCameraPreviewStream(null); setFoundRegions([]); setDiscoveryTargetId(null); setMapDiscoveryOpen(false); setRegionIndex(0); setMapDetected(false); setQuizLetters(Array(COUNTRY_ANSWER.length).fill('')); setQuizHintCount(0); setQuizMessage(''); setValidation(initialValidation); transitionTo('home') }
   const continueFromRegionInfo = () => {
     if (regionIndex === regionTargets.length - 1) transitionTo('quiz')
     else runCloudTransition(() => {
@@ -150,13 +180,16 @@ export default function App() {
       } else setCameraPermissionError('No pudimos activar la cámara. Revisa los permisos e inténtalo de nuevo.')
     }
   }
-  const activeTargets = screen === 'challenge' ? ['colombia-completa' as TargetId] : screen === 'regions' && currentRegion ? [currentRegion.id] : []
+  const activeTargets: TargetId[] = screen === 'challenge' ? ['colombia-completa'] : screen === 'regions' && currentRegion ? [currentRegion.id] : []
+  const allArTargetIds: TargetId[] = ['colombia-completa', ...regionalTargetIds]
   const mapReferenceOverlay = !mapDetected ? <div className="map-reference-group" aria-hidden="true"><img className="map-reference-overlay" src={whiteMap} alt="" /><span>?</span></div> : null
   const isArScreen = screen === 'challenge' || screen === 'regions'
+  const isRegionSearch = screen === 'regions' && Boolean(currentRegion && currentCopy)
+  const arDiscoveryOpen = mapDiscoveryOpen || Boolean(discoveryTargetId)
   const discoveryCopy = discoveryTargetId ? regionCopy[discoveryTargetId] : null
 
   return <div className={`game-shell ${isArScreen ? 'ar-game-shell' : ''}`}>
-    <div className={`cloud-transition ${cloudTransition}`} aria-hidden="true"><div className="cloud-curtain"><i className="cloud-lobe cloud-lobe-one" /><i className="cloud-lobe cloud-lobe-two" /><i className="cloud-lobe cloud-lobe-three" /><i className="cloud-lobe cloud-lobe-four" /></div><div className="cloud-bank cloud-bank-one" /><div className="cloud-bank cloud-bank-two" /><div className="cloud-bank cloud-bank-three" /></div>
+    <div className={`cloud-transition ${cloudTransition}`} aria-hidden="true"><div className="cloud-curtain"><i className="cloud-lobe cloud-lobe-one" /><i className="cloud-lobe cloud-lobe-two" /><i className="cloud-lobe cloud-lobe-three" /><i className="cloud-lobe cloud-lobe-four" /></div><div className="cloud-bank cloud-bank-one" /><div className="cloud-bank cloud-bank-two" /><div className="cloud-bank cloud-bank-three" /><div className="cloud-bank cloud-bank-extra cloud-bank-four" /><div className="cloud-bank cloud-bank-extra cloud-bank-five" /><div className="cloud-bank cloud-bank-extra cloud-bank-six" /><div className="cloud-bank cloud-bank-extra cloud-bank-seven" /><div className="cloud-bank cloud-bank-extra cloud-bank-eight" /></div>
     <main className={`game-main ${isArScreen ? 'ar-game-main' : ''}`}>
       {screen === 'home' && <section className="game-screen home-screen" aria-labelledby="game-title"><div className="home-copy"><div className="game-kicker">¡UNA AVENTURA PARA TODOS!</div><h1 id="game-title">¡HAY UN MUNDO <em>POR DESCUBRIR!</em></h1><p className="game-lead strong-lead">🔊 Para disfrutar mejor, activa y sube el volumen.</p><button className="game-primary" onClick={() => transitionTo('map')}>¡JUGAR AHORA! <span>🎉</span></button><p className="home-hint"><span>➜</span> Buscá este mapa por la UAP y descubre sus secretos</p></div><div className="home-map"><div className="map-rays" /><img src={whiteMap} alt="Mapa de Colombia" /><span className="map-searcher" aria-hidden="true">🔍</span><span className="map-sticker">¿DÓNDE ESTÁ? </span></div></section>}
       {screen === 'map' && <section className="game-screen mission-screen" aria-labelledby="map-title">
@@ -178,29 +211,20 @@ export default function App() {
           <p className="pale-note">🔒 Es seguro: la cámara solo se usa para reconocer el mapa. No guardamos imágenes ni datos personales.</p>
         </div>
       </section>}
-      {screen === 'challenge' && <section className="game-screen mission-screen ar-fullscreen-screen" aria-labelledby="challenge-title">
-        <h1 id="challenge-title" className="sr-only">¡Encuentra este mapa!</h1>
-        <ArExperience activeTargetIds={activeTargets} cameraStream={cameraPreviewStream ?? undefined} onTargetFound={() => setMapDetected(true)} onTargetLost={() => setMapDetected(false)} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} cameraOverlay={mapReferenceOverlay} anchoredScan autoStart showDetails={false} />
+      {isArScreen && <section className={`game-screen mission-screen ar-fullscreen-screen ${arDiscoveryOpen ? 'discovery-open' : ''}`} aria-labelledby={isRegionSearch ? 'region-title' : 'challenge-title'}>
+        <h1 id={isRegionSearch ? 'region-title' : 'challenge-title'} className="sr-only">{isRegionSearch ? `¡Encontremos la ${regionOrdinals[regionIndex].toLowerCase()} región!` : '¡Encuentra este mapa!'}</h1>
+        <ArExperience activeTargetIds={activeTargets} anchorTargetIds={allArTargetIds} cameraStream={cameraPreviewStream ?? undefined} onTargetFound={(targetId) => { if (targetId === 'colombia-completa') setMapDetected(true) }} onTargetLost={(targetId) => { if (targetId === 'colombia-completa') setMapDetected(false) }} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} cameraOverlay={isRegionSearch ? null : mapReferenceOverlay} anchoredScan={false} autoStart showDetails={false} />
         <div className="ar-top-overlay">
           <RegionProgressOverlay foundRegions={foundRegions} />
-          <div className="ar-instruction-overlay"><strong>ENCUENTRA EL MAPA</strong><span>Apunta la cámara al mapa.</span></div>
         </div>
-        <button className="ar-back-button" aria-label="Volver a los permisos de cámara" onClick={() => { setMapDetected(false); transitionTo('map') }}>←</button>
-      </section>}
-      {screen === 'mapSuccess' && <section className="game-screen discovery-screen" aria-labelledby="map-success-title"><div className="game-kicker">¡MAPA ENCONTRADO! 🎉</div><div className="success-map"><img src={whiteMap} alt="Mapa completo de Colombia" /><span>✓</span></div><h1 id="map-success-title">¡FELICIDADES! <em>ENCONTRASTE EL MAPA</em></h1><p className="game-lead">Ahora comienza la aventura explorando cada región.</p><button className="game-primary" onClick={() => transitionTo('regions')}>¡COMENZAR A EXPLORAR! →</button></section>}
-      {screen === 'regions' && currentRegion && currentCopy && <section className={`game-screen mission-screen ar-fullscreen-screen ${discoveryTargetId ? 'discovery-open' : ''}`} aria-labelledby="region-title">
-        <h1 id="region-title" className="sr-only">¡Encontremos la {regionOrdinals[regionIndex].toLowerCase()} región!</h1>
-        <ArExperience key={currentRegion.id} activeTargetIds={[currentRegion.id]} cameraStream={cameraPreviewStream ?? undefined} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} anchoredScan anchoredScanImage={regionReferenceAssets[currentRegion.id]} autoStart showDetails={false} />
-        <div className="ar-top-overlay">
-          <RegionProgressOverlay foundRegions={foundRegions} />
-          <div className="ar-instruction-overlay"><strong>ENCUENTRA LA SILUETA</strong><span>Ubícala en el mapa.</span></div>
-        </div>
-        <div className="ar-region-guide-overlay">
+        <CameraGuidanceOverlay referenceImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : whiteMap} discoveryOpen={arDiscoveryOpen} />
+        {isRegionSearch && currentRegion && <div className="ar-region-guide-overlay">
           <img src={regionReferenceAssets[currentRegion.id]} alt="Silueta de la región que debes ubicar" />
           <div><strong>UBICA ESTA SILUETA</strong><span>EN EL MAPA</span></div>
-        </div>
+        </div>}
+        {mapDiscoveryOpen && <MapDiscoveryCard onContinue={continueFromMapDiscovery} />}
         {discoveryCopy && <DiscoveryCard copy={discoveryCopy} onContinue={continueFromDiscovery} />}
-        <button className="ar-back-button" aria-label="Volver a la pantalla anterior" onClick={() => transitionTo(regionIndex === 0 ? 'mapSuccess' : 'regionInfo')}>←</button>
+        <button className="ar-back-button" aria-label={isRegionSearch ? 'Volver a buscar el mapa completo' : 'Volver a los permisos de cámara'} onClick={() => { if (isRegionSearch) { transitionTo('challenge'); return } setMapDetected(false); transitionTo('map') }}>←</button>
       </section>}
       {screen === 'regionInfo' && currentRegion && currentCopy && <section className="game-screen discovery-screen" aria-labelledby="region-info-title"><div className={`region-info-map ${currentCopy.color}`}><img src={regionReferenceAssets[currentRegion.id]} alt={`Mapa de la región ${currentCopy.name}`} /></div><div className="game-kicker">¡REGIÓN ENCONTRADA! ✅</div><p className="game-lead strong-lead">Descubriste la región {regionIndex + 1} de 5</p><h1 id="region-info-title"><em>{currentCopy.name} {currentCopy.emoji}</em></h1><p className="region-fact">{currentCopy.fact}</p><p className="region-subtitle">{currentCopy.subtitle}</p><button className="game-primary" onClick={continueFromRegionInfo}>{regionIndex === regionTargets.length - 1 ? '¡VER RESULTADO FINAL! 🎉' : '¡BUSCAR LA SIGUIENTE REGIÓN! →'}</button></section>}
       {screen === 'quiz' && <section className="game-screen discovery-screen quiz-screen" aria-labelledby="quiz-title"><div className="game-kicker">¡5 REGIONES DESCUBIERTAS! 🎉</div><div className="quiz-map"><img src={whiteMap} alt="Mapa completo de Colombia" /></div><h1 id="quiz-title">ACABAS DE DESCUBRIR UN <em>PAÍS COMPLETO</em></h1><p className="game-lead strong-lead">¿SABES CÓMO SE LLAMA?</p><div className="quiz-letters" aria-label="Escribe el nombre del país">{COUNTRY_ANSWER.split('').map((_, index) => <input key={index} ref={(element) => { quizInputRefs.current[index] = element }} className={index < quizHintCount ? 'hint-letter' : ''} aria-label={`Letra ${index + 1} de 7`} maxLength={1} readOnly={index < quizHintCount} value={quizLetters[index]} onChange={(event) => handleQuizLetterChange(index, event.target.value)} onKeyDown={(event) => handleQuizKeyDown(index, event)} autoFocus={index === quizHintCount} />)}</div>{quizMessage && <p className="quiz-message" role="status">💡 {quizMessage}</p>}<button className="game-primary" onClick={checkCountryAnswer}>COMPROBAR →</button></section>}

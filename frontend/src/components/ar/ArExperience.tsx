@@ -16,7 +16,8 @@ type ArExperienceProps = {
   onTargetConfirmed?: (targetId: TargetId) => void
   onTargetFound?: (targetId: TargetId) => void
   onTargetLost?: (targetId: TargetId) => void
-  activeTargetIds?: TargetId[]
+  activeTargetIds?: readonly TargetId[]
+  anchorTargetIds?: readonly TargetId[]
   heading?: string
   description?: string
   autoStart?: boolean
@@ -28,7 +29,7 @@ type ArExperienceProps = {
   showDetails?: boolean
 }
 
-export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFound, onTargetLost, activeTargetIds = TARGETS.map((target) => target.id), heading = 'Image tracking', description = 'Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.', autoStart = false, confirmationDurationMs = TARGET_CONFIRMATION_MS, cameraOverlay, anchoredScan = false, anchoredScanImage = '/assets/ui/white-map.png', cameraStream, showDetails = true }: ArExperienceProps) {
+export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFound, onTargetLost, activeTargetIds = TARGETS.map((target) => target.id), anchorTargetIds = activeTargetIds, heading = 'Image tracking', description = 'Point the camera at the complete map or one of the five regional pieces. Labels appear only after MindAR confirms a target.', autoStart = false, confirmationDurationMs = TARGET_CONFIRMATION_MS, cameraOverlay, anchoredScan = false, anchoredScanImage = '/assets/ui/white-map.png', cameraStream, showDetails = true }: ArExperienceProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mindarRef = useRef<MindARThree | null>(null)
   const hideTimersRef = useRef(new Map<string, number>())
@@ -40,6 +41,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
   const onTargetConfirmedRef = useRef(onTargetConfirmed)
   const labelsRef = useRef(new Map<TargetId, HTMLDivElement>())
   const scanElementsRef = useRef(new Map<TargetId, HTMLDivElement>())
+  const highlightElementsRef = useRef(new Map<TargetId, HTMLDivElement>())
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
   const [tracking, setTracking] = useState<Record<string, TrackingStatus>>(() => Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
@@ -51,6 +53,12 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     const active = activeTargetIdsRef.current
     labelsRef.current.forEach((label, targetId) => { label.style.display = active.has(targetId) ? '' : 'none' })
     setTracking((current) => Object.fromEntries(TARGETS.map((target) => [target.id, active.has(target.id) ? current[target.id] : 'not-detected'])))
+  }, [activeTargetIds.join('|')])
+
+  useEffect(() => {
+    if (activeTargetIdsRef.current.size !== 1) return
+    const controller = (mindarRef.current as (MindARThree & { controller?: { interestedTargetIndex: number } }) | null)?.controller
+    if (controller) controller.interestedTargetIndex = TARGETS.findIndex((target) => activeTargetIdsRef.current.has(target.id))
   }, [activeTargetIds.join('|')])
 
   const clearHideTimers = () => {
@@ -69,6 +77,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     clearConfirmationTimers()
     confirmedTargetsRef.current.clear()
     scanElementsRef.current.clear()
+    highlightElementsRef.current.clear()
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
@@ -87,6 +96,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     clearConfirmationTimers()
     confirmedTargetsRef.current.clear()
     scanElementsRef.current.clear()
+    highlightElementsRef.current.clear()
     const instance = mindarRef.current
     if (instance) {
       instance.renderer.setAnimationLoop(null)
@@ -105,7 +115,8 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         throw new Error('Camera access requires HTTPS or localhost.')
       }
-      const targetsToTrack = TARGETS.filter((target) => activeTargetIdsRef.current.has(target.id))
+      const anchorTargetSet = new Set(anchorTargetIds)
+      const targetsToTrack = TARGETS.filter((target) => anchorTargetSet.has(target.id))
       const instance = new MindARThree({ container: containerRef.current, imageTargetSrc: '/assets/tracking/colombia-targets.mind', maxTrack: Math.max(1, targetsToTrack.length), warmupTolerance: MINDAR_WARMUP_TOLERANCE, missTolerance: MINDAR_MISS_TOLERANCE, uiLoading: 'no', uiScanning: 'no', uiError: 'no' })
       mindarRef.current = instance
       const runId = runIdRef.current
@@ -120,6 +131,16 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
         label.setAttribute('aria-hidden', 'true')
         labelsRef.current.set(target.id, label)
         const object = new CSS3DObject(label); object.scale.set(1, 1, 1); anchor.group.add(object)
+        const highlight = document.createElement('div')
+        highlight.className = 'ar-target-highlight'
+        highlight.dataset.targetId = target.id
+        highlight.setAttribute('aria-hidden', 'true')
+        highlight.style.visibility = 'hidden'
+        highlight.innerHTML = '<span class="ar-target-highlight-corner corner-top-left"></span><span class="ar-target-highlight-corner corner-top-right"></span><span class="ar-target-highlight-corner corner-bottom-left"></span><span class="ar-target-highlight-corner corner-bottom-right"></span><i class="ar-target-highlight-pulse"></i>'
+        const highlightObject = new CSS3DObject(highlight)
+        highlightObject.scale.set(1, 1, 1)
+        anchor.group.add(highlightObject)
+        highlightElementsRef.current.set(target.id, highlight)
         if (anchoredScan) {
           const scan = document.createElement('div')
           scan.className = 'ar-anchored-scan'
@@ -136,6 +157,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
           if (runId !== runIdRef.current || mindarRef.current !== instance) return
           if (!activeTargetIdsRef.current.has(target.id)) return
           const scan = scanElementsRef.current.get(target.id)
+          const highlight = highlightElementsRef.current.get(target.id)
           if (scan) {
             const fill = scan.querySelector('.ar-anchored-scan-fill') as HTMLElement | null
             scan.style.visibility = 'visible'
@@ -154,6 +176,12 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
             confirmedTargetsRef.current.add(target.id)
             label.style.visibility = 'visible'
             label.setAttribute('aria-hidden', 'false')
+            if (highlight) {
+              highlight.style.visibility = 'visible'
+              highlight.classList.remove('is-confirmed')
+              void highlight.offsetWidth
+              highlight.classList.add('is-confirmed')
+            }
             setTargetStatus(index, 'detected')
             onTargetConfirmedRef.current?.(target.id)
           }, confirmationDurationMs)
@@ -163,6 +191,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
           if (runId !== runIdRef.current || mindarRef.current !== instance) return
           if (!activeTargetIdsRef.current.has(target.id)) return
           const scan = scanElementsRef.current.get(target.id)
+          const highlight = highlightElementsRef.current.get(target.id)
           if (scan) scan.style.visibility = 'hidden'
           onTargetLost?.(target.id)
           const confirmationTimer = confirmationTimersRef.current.get(target.id)
@@ -173,6 +202,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
           const timer = window.setTimeout(() => {
             if (runId === runIdRef.current && mindarRef.current === instance) {
               label.style.visibility = 'hidden'
+              if (highlight) highlight.style.visibility = 'hidden'
               setTargetStatus(index, 'lost')
             }
             hideTimersRef.current.delete(target.id)
@@ -199,9 +229,9 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       } finally {
         mediaDevices.getUserMedia = originalGetUserMedia
       }
-      if (targetsToTrack.length === 1) {
+      if (activeTargetIdsRef.current.size === 1) {
         const controller = (instance as MindARThree & { controller?: { interestedTargetIndex: number } }).controller
-        if (controller) controller.interestedTargetIndex = TARGETS.findIndex((target) => target.id === targetsToTrack[0].id)
+        if (controller) controller.interestedTargetIndex = TARGETS.findIndex((target) => activeTargetIdsRef.current.has(target.id))
       }
       const video = containerRef.current.querySelector('video')
       if (video) { video.muted = true; video.playsInline = true; video.style.zIndex = '0' }
