@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { ArExperience } from '../src/components/ar/ArExperience'
 
@@ -47,8 +47,7 @@ describe('ArExperience tracking overlays', () => {
   test('shows the correct anchored label and keeps one label per target', async () => {
     vi.useFakeTimers()
     try {
-      render(<ArExperience />)
-      fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
+      render(<ArExperience autoStart />)
       await act(async () => { await Promise.resolve() })
 
       const instance = mindarMock.instance
@@ -70,8 +69,7 @@ describe('ArExperience tracking overlays', () => {
   test('hides a lost label after the grace period and restores it on reacquisition', async () => {
     vi.useFakeTimers()
     try {
-      render(<ArExperience />)
-      fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
+      render(<ArExperience autoStart />)
       await act(async () => { await Promise.resolve() })
 
       const instance = mindarMock.instance
@@ -97,8 +95,7 @@ describe('ArExperience tracking overlays', () => {
   test('losing one target does not hide another target label', async () => {
     vi.useFakeTimers()
     try {
-      render(<ArExperience />)
-      fireEvent.click(screen.getByRole('button', { name: 'Start camera' }))
+      render(<ArExperience autoStart />)
       await act(async () => { await Promise.resolve() })
 
       const instance = mindarMock.instance

@@ -3,12 +3,13 @@ declare module 'mind-ar/dist/mindar-image-three.prod.js' {
     constructor(options: { container: HTMLElement; imageTargetSrc: string; maxTrack?: number; warmupTolerance?: number; missTolerance?: number; filterMinCF?: number; filterBeta?: number; uiLoading?: string; uiScanning?: string; uiError?: string })
     renderer: { domElement: HTMLElement; setAnimationLoop(callback: (() => void) | null): void; render(scene: unknown, camera: unknown): void; dispose(): void }
     cssRenderer: { render(scene: unknown, camera: unknown): void }
+    controller?: { interestedTargetIndex: number }
     scene: unknown
     cssScene: unknown
     camera: unknown
     start(): Promise<void>
     stop(): void
-    addCSSAnchor(targetIndex: number): { group: { add(object: unknown): void }; onTargetFound: (() => void) | null; onTargetLost: (() => void) | null; onTargetUpdate: (() => void) | null }
+    addCSSAnchor(targetIndex: number): { group: { add(object: unknown): void; updateMatrixWorld(force?: boolean): void; localToWorld(point: unknown): unknown }; onTargetFound: (() => void) | null; onTargetLost: (() => void) | null; onTargetUpdate: (() => void) | null }
   }
 }
 
