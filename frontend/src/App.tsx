@@ -4,6 +4,7 @@ import { ArExperience } from './components/ar/ArExperience'
 import { TARGETS, type TargetId } from './types/api'
 import { deriveGlobalValidation, type GlobalValidationResult } from './components/ar/globalValidation'
 import { FinalExperience } from './components/finale/FinalExperience'
+import { DiscoveryExperience } from './components/ar/DiscoveryExperience'
 import whiteMap from './assets-white-map.png'
 
 const debugApp = (...details: unknown[]) => {
@@ -36,20 +37,6 @@ const regionReferenceAssets: Record<string, string> = {
 function RegionProgressOverlay({ foundRegions }: { foundRegions: TargetId[] }) {
   const confirmedCount = regionalTargetIds.filter((targetId) => foundRegions.includes(targetId)).length
   return <div className="ar-progress-overlay" aria-label={`${confirmedCount} de 5 regiones descubiertas`}><div className="ar-progress-copy"><strong>{confirmedCount} de 5 regiones</strong><span>El misterio continúa</span></div><div className="ar-progress-markers">{regionalTargetIds.map((targetId) => <span key={targetId} className={foundRegions.includes(targetId) ? 'confirmed' : ''} aria-label={foundRegions.includes(targetId) ? 'Región descubierta' : 'Región pendiente'} />)}</div></div>
-}
-
-function DiscoveryCard({ copy, onContinue }: { copy: typeof regionCopy[string]; onContinue: () => void }) {
-  return <aside className="ar-discovery-card" aria-live="polite"><div className="ar-discovery-kicker">¡REGIÓN DESCUBIERTA! <img className="inline-icon" src={copy.icon} alt="" /></div><h2>{copy.discoveryTitle}</h2><p>{copy.discoveryBody}</p><div className="ar-discovery-progress">Descubrimiento confirmado · sigue la aventura</div><button className="game-primary" onClick={onContinue}>{copy.name === 'AMAZONÍA' ? '¡DESCUBRIR EL MISTERIO! →' : '¡CONTINUAR! →'}</button></aside>
-}
-
-function MapDiscoveryCard({ onContinue }: { onContinue: () => void }) {
-  return <aside className="ar-map-discovery-card" aria-live="polite" aria-label="Descubrimiento del mapa completo">
-    <div className="ar-map-discovery-track">
-      <div className="ar-map-discovery-slide ar-map-discovery-map"><img src={whiteMap} alt="Mapa completo de Colombia" /><img className="discovery-icon" src={iconPath('confirmacion.svg')} alt="Mapa encontrado" /><small>Desliza para descubrir más →</small></div>
-      <div className="ar-map-discovery-slide ar-map-discovery-copy"><div className="ar-discovery-kicker">¡MAPA ENCONTRADO! <img className="inline-icon" src={iconPath('brillo.svg')} alt="" /></div><h2>¡HAY ALGO EXTRAORDINARIO AQUÍ!</h2><p>Montañas, selvas, llanuras y costas… ¿qué secretos esconderá este lugar?</p><strong>Desliza para volver al mapa</strong></div>
-    </div>
-    <button className="game-primary" onClick={onContinue}>¡COMENZAR A EXPLORAR! →</button>
-  </aside>
 }
 
 function CameraGuidanceOverlay({ referenceImage, discoveryOpen, message }: { referenceImage: string; discoveryOpen: boolean; message: string }) {
@@ -204,7 +191,7 @@ export default function App() {
   return <div className={`game-shell ${isArScreen ? 'ar-game-shell' : ''}`}>
     <div className={`cloud-transition ${cloudTransition}`} aria-hidden="true"><div className="cloud-curtain"><i className="cloud-lobe cloud-lobe-one" /><i className="cloud-lobe cloud-lobe-two" /><i className="cloud-lobe cloud-lobe-three" /><i className="cloud-lobe cloud-lobe-four" /></div><div className="cloud-bank cloud-bank-one" /><div className="cloud-bank cloud-bank-two" /><div className="cloud-bank cloud-bank-three" /><div className="cloud-bank cloud-bank-extra cloud-bank-four" /><div className="cloud-bank cloud-bank-extra cloud-bank-five" /><div className="cloud-bank cloud-bank-extra cloud-bank-six" /><div className="cloud-bank cloud-bank-extra cloud-bank-seven" /><div className="cloud-bank cloud-bank-extra cloud-bank-eight" /></div>
     <main className={`game-main ${isArScreen ? 'ar-game-main' : ''}`}>
-      {screen === 'home' && <section className="game-screen home-screen" aria-labelledby="game-title"><div className="home-copy"><div className="game-kicker">¡UNA AVENTURA PARA TODOS!</div><h1 id="game-title">¡HAY UN MUNDO <em>POR DESCUBRIR!</em></h1><p className="game-lead strong-lead volume-notice"><img className="inline-icon volume-notice-icon" src={iconPath('volumen.svg')} alt="" /> Para disfrutar mejor, activa y sube el volumen.</p><button className="game-primary" onClick={() => transitionTo('map')}>¡JUGAR AHORA! <img className="button-icon" src={iconPath('celebracion-final.svg')} alt="" /></button><p className="home-hint"><img className="inline-icon" src={iconPath('flecha-continuar.svg')} alt="" /> Buscá este mapa por la UAP y descubre sus secretos</p></div><div className="home-map"><div className="map-rays" /><img src={whiteMap} alt="Mapa de Colombia" /><img className="map-searcher" src={iconPath('buscar2.svg')} alt="" /><span className="map-sticker">¿DÓNDE ESTÁ? </span></div></section>}
+      {screen === 'home' && <section className="game-screen home-screen" aria-labelledby="game-title"><div className="home-copy"><div className="game-kicker">¡UNA AVENTURA PARA TODOS!</div><h1 id="game-title">¡HAY UN MUNDO <em>POR DESCUBRIR!</em></h1><p className="game-lead strong-lead volume-notice"><img className="inline-icon volume-notice-icon" src={iconPath('volumen.svg')} alt="" /> Para disfrutar mejor, activa y sube el volumen.</p><button className="game-primary" onClick={() => transitionTo('map')}>¡JUGAR AHORA! <img className="button-icon" src={iconPath('celebracion-final.svg')} alt="" /></button><p className="home-hint"><img className="inline-icon" src={iconPath('flecha-continuar.svg')} alt="" /> Buscá este mapa por la UAP y descubre sus secretos</p></div><div className="home-map"><div className="map-rays" /><img src={whiteMap} alt="Silueta del mapa" /><img className="map-searcher" src={iconPath('buscar2.svg')} alt="" /><span className="map-sticker">¿DÓNDE ESTÁ? </span></div></section>}
       {screen === 'map' && <section className="game-screen mission-screen" aria-labelledby="map-title">
         <button className="back-button" onClick={() => transitionTo('home')}>← Volver</button>
         <div className="game-kicker">ANTES DE EMPEZAR</div>
@@ -233,8 +220,8 @@ export default function App() {
           <img src={regionReferenceAssets[currentRegion.id]} alt="Silueta de la región que debes ubicar" />
           <div><strong>UBICA ESTA SILUETA</strong><span>EN EL MAPA</span></div>
         </div>}
-        {mapDiscoveryOpen && <MapDiscoveryCard onContinue={continueFromMapDiscovery} />}
-        {discoveryCopy && <DiscoveryCard copy={discoveryCopy} onContinue={continueFromDiscovery} />}
+        {mapDiscoveryOpen && <DiscoveryExperience map onContinue={continueFromMapDiscovery} />}
+        {discoveryCopy && <DiscoveryExperience copy={discoveryCopy} onContinue={continueFromDiscovery} />}
         {screen === 'quiz' && <aside className="ar-discovery-card ar-quiz-card" aria-live="polite"><div className="ar-discovery-kicker">¡5 REGIONES DESCUBIERTAS! <img className="inline-icon" src={iconPath('estrella-logro.svg')} alt="" /></div><h2>¿CÓMO SE LLAMA ESTE PAÍS?</h2><p>Cinco regiones extraordinarias. Una tierra llena de vida, historias y contrastes.</p><div className="quiz-letters" aria-label="Escribe el nombre del país">{COUNTRY_ANSWER.split('').map((_, index) => <input key={index} ref={(element) => { quizInputRefs.current[index] = element }} className={index < quizHintCount ? 'hint-letter' : ''} aria-label={`Letra ${index + 1} de 7`} maxLength={1} readOnly={index < quizHintCount} value={quizLetters[index]} onChange={(event) => handleQuizLetterChange(index, event.target.value)} onKeyDown={(event) => handleQuizKeyDown(index, event)} autoFocus={index === quizHintCount} />)}</div>{quizMessage && <p className="quiz-message" role="status"><img className="inline-icon" src={iconPath('pista.svg')} alt="" /> {quizMessage}</p>}<button className="game-primary" onClick={checkCountryAnswer}>COMPROBAR <img className="button-icon" src={iconPath('flecha-continuar.svg')} alt="" /></button></aside>}
         {screen === 'complete' && <aside className="ar-discovery-card ar-final-card" aria-live="polite"><div className="ar-discovery-kicker">¡QUÉ GRAN EQUIPO! <img className="inline-icon" src={iconPath('celebracion-final.svg')} alt="" /></div><img src={whiteMap} alt="Mapa completo de Colombia" /><h2>¡LO DESCUBRISTE!</h2><p><strong>¡ESTO ES COLOMBIA!</strong><br />Cinco regiones extraordinarias. Una tierra llena de vida, historias y contrastes.</p><button className="game-primary" onClick={resetGame}>¡DESCUBRIR OTRA VEZ! <img className="button-icon" src={iconPath('repetir.svg')} alt="" /></button></aside>}
         <button className="ar-back-button" aria-label={isRegionSearch ? 'Volver a buscar el mapa completo' : 'Volver a los permisos de cámara'} onClick={() => { if (screen === 'quiz' || screen === 'complete') { transitionTo('regions'); return } if (isRegionSearch) { transitionTo('challenge'); return } transitionTo('map') }}><img src={iconPath('flecha-atras.svg')} alt="" /></button>
