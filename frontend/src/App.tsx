@@ -33,6 +33,18 @@ const regionReferenceAssets: Record<string, string> = {
   'region-orinoquia': '/assets/ui/regions/orinoquia-white.png',
   'region-amazonia': '/assets/ui/regions/amazonas-white.png',
 }
+const audioPath = (name: string) => `/audios/${name}`
+const regionAudio: Record<RegionalTargetId, string> = {
+  'region-caribe': audioPath('audio-caribe.mp3'),
+  'region-andina': audioPath('audio-andes.mp3'),
+  'region-pacifica': audioPath('audio-pacifico.mp3'),
+  'region-orinoquia': audioPath('audio-orinoquia.mp3'),
+  'region-amazonia': audioPath('audio-amazonas.mp3'),
+}
+
+function AudioToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return <button className={`audio-toggle ${enabled ? 'is-enabled' : 'is-muted'}`} type="button" onClick={onToggle} aria-label={enabled ? 'Desactivar audio' : 'Activar audio'} aria-pressed={enabled} title={enabled ? 'Desactivar audio' : 'Activar audio'}><img src={iconPath('volumen.svg')} alt="" /> <span>{enabled ? 'Audio' : 'Silencio'}</span></button>
+}
 
 function RegionProgressOverlay({ foundRegions }: { foundRegions: TargetId[] }) {
   const confirmedCount = regionalTargetIds.filter((targetId) => foundRegions.includes(targetId)).length
@@ -62,14 +74,37 @@ export default function App() {
   const [quizLetters, setQuizLetters] = useState<string[]>(() => Array(COUNTRY_ANSWER.length).fill(''))
   const [quizHintCount, setQuizHintCount] = useState(0)
   const [quizMessage, setQuizMessage] = useState('')
+  const [audioEnabled, setAudioEnabled] = useState(true)
   const [cloudTransition, setCloudTransition] = useState<'idle' | 'covering' | 'revealing'>('idle')
   const cameraPreviewRef = useRef<HTMLVideoElement>(null)
   const quizInputRefs = useRef<Array<HTMLInputElement | null>>([])
   const transitionTimerRef = useRef<number | null>(null)
   const revealTimerRef = useRef<number | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [, setValidation] = useState<GlobalValidationResult>(initialValidation)
   const currentRegion = regionTargets[regionIndex]
   const currentCopy = currentRegion ? regionCopy[currentRegion.id] : null
+  const playAudio = useCallback((src: string) => {
+    if (!audioEnabled) return
+    const audio = audioRef.current ?? new Audio()
+    audioRef.current = audio
+    audio.pause()
+    audio.src = src
+    audio.currentTime = 0
+    try {
+      const playback = audio.play()
+      if (playback) void playback.catch((error) => debugApp('audio-play-failed', { src, error }))
+    } catch (error) {
+      debugApp('audio-play-failed', { src, error })
+    }
+  }, [audioEnabled])
+  const toggleAudio = () => {
+    setAudioEnabled((enabled) => {
+      const next = !enabled
+      if (!next && audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0 }
+      return next
+    })
+  }
   const runCloudTransition = useCallback((update: () => void) => {
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current)
     if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current)
@@ -97,12 +132,13 @@ export default function App() {
   }), [])
   const handleTargetConfirmed = useCallback((targetId: TargetId) => {
     debugApp('target-confirmed-callback', { targetId, screen, mapDiscoveryOpen, discoveryTargetId, regionIndex })
-    if (screen === 'challenge' && targetId === 'colombia-completa') { setMapDiscoveryOpen(true); return }
+    if (screen === 'challenge' && targetId === 'colombia-completa') { if (!mapDiscoveryOpen) playAudio(audioPath('audio-mapa.mp3')); setMapDiscoveryOpen(true); return }
     if (screen !== 'regions' || !currentRegion || targetId !== currentRegion.id) return
     if (foundRegions.includes(targetId)) return
     setFoundRegions((current) => current.includes(targetId) ? current : [...current, targetId])
     setDiscoveryTargetId(targetId as RegionalTargetId)
-  }, [currentRegion, foundRegions, screen])
+    playAudio(regionAudio[targetId as RegionalTargetId])
+  }, [currentRegion, foundRegions, mapDiscoveryOpen, playAudio, screen])
   const continueFromMapDiscovery = () => {
     debugApp('map-discovery-continue', { screen, mapDiscoveryOpen, cameraStillMounted: true })
     setMapDiscoveryOpen(false)
@@ -177,6 +213,9 @@ export default function App() {
       window.clearTimeout(transitionTimer)
     }
   }, [cameraPreviewStream, screen, transitionTo])
+  useEffect(() => {
+    if (screen === 'finale') playAudio(audioPath('audio-final.mp3'))
+  }, [playAudio, screen])
   const requestCameraPermission = async () => {
     setCameraPermissionError('')
     setCameraPermissionBlocked(false)
@@ -201,10 +240,10 @@ export default function App() {
   const arDiscoveryOpen = mapDiscoveryOpen || Boolean(discoveryTargetId) || quizTransitioning || screen === 'quiz' || screen === 'complete'
   const discoveryCopy = discoveryTargetId ? regionCopy[discoveryTargetId] : null
 
-  return <div className={`game-shell ${isArScreen ? 'ar-game-shell' : ''}`}>
+  return <div className={`game-shell ${isArScreen ? 'ar-game-shell' : ''}`}><AudioToggle enabled={audioEnabled} onToggle={toggleAudio} />
     <div className={`cloud-transition ${cloudTransition}`} aria-hidden="true"><div className="cloud-curtain"><i className="cloud-lobe cloud-lobe-one" /><i className="cloud-lobe cloud-lobe-two" /><i className="cloud-lobe cloud-lobe-three" /><i className="cloud-lobe cloud-lobe-four" /></div><div className="cloud-bank cloud-bank-one" /><div className="cloud-bank cloud-bank-two" /><div className="cloud-bank cloud-bank-three" /><div className="cloud-bank cloud-bank-extra cloud-bank-four" /><div className="cloud-bank cloud-bank-extra cloud-bank-five" /><div className="cloud-bank cloud-bank-extra cloud-bank-six" /><div className="cloud-bank cloud-bank-extra cloud-bank-seven" /><div className="cloud-bank cloud-bank-extra cloud-bank-eight" /></div>
     <main className={`game-main ${isArScreen ? 'ar-game-main' : ''}`}>
-      {screen === 'home' && <section className="game-screen home-screen" aria-labelledby="game-title"><div className="home-copy"><div className="game-kicker">¡UNA AVENTURA PARA TODOS!</div><h1 id="game-title">¡HAY UN MUNDO <em>POR DESCUBRIR!</em></h1><p className="game-lead strong-lead volume-notice"><img className="inline-icon volume-notice-icon" src={iconPath('volumen.svg')} alt="" /> Para disfrutar mejor, activa y sube el volumen.</p><button className="game-primary" onClick={() => transitionTo('map')}>¡JUGAR AHORA! <img className="button-icon" src={iconPath('celebracion-final.svg')} alt="" /></button><p className="home-hint"><img className="inline-icon" src={iconPath('flecha-continuar.svg')} alt="" /> Buscá este mapa por la UAP y descubre sus secretos</p></div><div className="home-map"><div className="map-rays" /><img src={whiteMap} alt="Silueta del mapa" /><img className="map-searcher" src={iconPath('buscar2.svg')} alt="" /><span className="map-sticker">¿DÓNDE ESTÁ? </span></div></section>}
+      {screen === 'home' && <section className="game-screen home-screen" aria-labelledby="game-title"><div className="home-copy"><div className="game-kicker">¡UNA AVENTURA PARA TODOS!</div><h1 id="game-title">¡HAY UN MUNDO <em>POR DESCUBRIR!</em></h1><p className="game-lead strong-lead volume-notice"><img className="inline-icon volume-notice-icon" src={iconPath('volumen.svg')} alt="" /> Para disfrutar mejor, activa y sube el volumen.</p><button className="game-primary" onClick={() => { playAudio(audioPath('audio-principio.mp3')); transitionTo('map') }}>¡JUGAR AHORA! <img className="button-icon" src={iconPath('celebracion-final.svg')} alt="" /></button><p className="home-hint"><img className="inline-icon" src={iconPath('flecha-continuar.svg')} alt="" /> Buscá este mapa por la UAP y descubre sus secretos</p></div><div className="home-map"><div className="map-rays" /><img src={whiteMap} alt="Silueta del mapa" /><img className="map-searcher" src={iconPath('buscar2.svg')} alt="" /><span className="map-sticker">¿DÓNDE ESTÁ? </span></div></section>}
       {screen === 'map' && <section className="game-screen mission-screen" aria-labelledby="map-title">
         <button className="back-button" onClick={() => transitionTo('home')}>← Volver</button>
         <div className="game-kicker">ANTES DE EMPEZAR</div>
