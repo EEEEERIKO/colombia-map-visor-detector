@@ -9,6 +9,7 @@ declare module 'mind-ar/dist/mindar-image-three.prod.js' {
     camera: unknown
     start(): Promise<void>
     stop(): void
+    addAnchor?(targetIndex: number): { group: { add(object: unknown): void; updateMatrixWorld(force?: boolean): void; localToWorld(point: unknown): unknown }; onTargetFound: (() => void) | null; onTargetLost: (() => void) | null; onTargetUpdate: (() => void) | null }
     addCSSAnchor(targetIndex: number): { group: { add(object: unknown): void; updateMatrixWorld(force?: boolean): void; localToWorld(point: unknown): unknown }; onTargetFound: (() => void) | null; onTargetLost: (() => void) | null; onTargetUpdate: (() => void) | null }
   }
 }
