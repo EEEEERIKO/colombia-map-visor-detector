@@ -175,6 +175,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
   const highlightElementsRef = useRef(new Map<TargetId, HTMLDivElement>())
   const particleSystemsRef = useRef(new Map<TargetId, AnchoredParticleSystem>())
   const animationLoopRef = useRef<(() => void) | null>(null)
+  const cameraStreamsRef = useRef(new Set<MediaStream>())
   const elapsedRef = useRef(0)
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
@@ -222,6 +223,17 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     confirmationTimersRef.current.clear()
   }
 
+  const stopAttachedCameraTracks = () => {
+    cameraStreamsRef.current.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
+    cameraStreamsRef.current.clear()
+    containerRef.current?.querySelectorAll('video').forEach((video) => {
+      video.pause()
+      const stream = video.srcObject as MediaStream | null
+      stream?.getTracks().forEach((track) => track.stop())
+      video.srcObject = null
+    })
+  }
+
   const stop = () => {
     debugAr('session:stop', { hasMindAR: Boolean(mindarRef.current), particleSystems: particleSystemsRef.current.size })
     runIdRef.current += 1
@@ -236,6 +248,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     particleSystemsRef.current.forEach((particles) => particles.dispose())
     particleSystemsRef.current.clear()
     const instance = mindarRef.current
+    stopAttachedCameraTracks()
     if (instance) {
       instance.renderer.setAnimationLoop(null)
       animationLoopRef.current = null
@@ -259,6 +272,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     particleSystemsRef.current.forEach((particles) => particles.dispose())
     particleSystemsRef.current.clear()
     const instance = mindarRef.current
+    stopAttachedCameraTracks()
     if (instance) {
       instance.renderer.setAnimationLoop(null)
       animationLoopRef.current = null
@@ -446,13 +460,17 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       const originalGetUserMedia = mediaDevices.getUserMedia
       try {
         mediaDevices.getUserMedia = (constraints) => {
-          if (cameraStream) return Promise.resolve(typeof cameraStream.clone === 'function' ? cameraStream.clone() : cameraStream)
-          if (!constraints?.video) return originalGetUserMedia.call(mediaDevices, constraints)
+          if (cameraStream) {
+            const stream = typeof cameraStream.clone === 'function' ? cameraStream.clone() : cameraStream
+            cameraStreamsRef.current.add(stream)
+            return Promise.resolve(stream)
+          }
+          if (!constraints?.video) return originalGetUserMedia.call(mediaDevices, constraints).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
           const videoConstraints = typeof constraints.video === 'object' ? constraints.video : {}
           return originalGetUserMedia.call(mediaDevices, {
             ...constraints,
             video: { ...videoConstraints, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          })
+          }).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
         }
         await instance.start()
       } finally {
