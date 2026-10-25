@@ -469,7 +469,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
           const videoConstraints = typeof constraints.video === 'object' ? constraints.video : {}
           return originalGetUserMedia.call(mediaDevices, {
             ...constraints,
-            video: { ...videoConstraints, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            video: { ...videoConstraints, facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
           }).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
         }
         await instance.start()

@@ -224,7 +224,10 @@ export default function App() {
       return
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      })
       setCameraPreviewStream(stream)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {
