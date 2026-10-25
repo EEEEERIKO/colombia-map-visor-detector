@@ -1,5 +1,8 @@
 name: CI
-on: [push, pull_request]
+# Desactivado para que no se ejecute automáticamente en cada push o pull request.
+# Se conserva como ejecución manual desde GitHub Actions si alguna vez hace falta.
+on:
+  workflow_dispatch:
 jobs:
   backend:
     runs-on: ubuntu-latest
