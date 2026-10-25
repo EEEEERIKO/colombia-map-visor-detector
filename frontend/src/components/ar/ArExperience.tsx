@@ -37,6 +37,19 @@ const stabilizeCameraTrack = async (stream: MediaStream) => {
   try { await track.applyConstraints({ advanced } as MediaTrackConstraints) } catch { /* Safari exposes capabilities inconsistently. */ }
 }
 
+const configureMobileWebgl = async () => {
+  const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
+  if (!mobile) return
+  // Packed WebGL shaders are faster, but some mobile GPU/driver combinations
+  // fail to translate them to Metal/OpenGL after an OS update. The unpacked
+  // path is a little slower and considerably more portable for image tracking.
+  try {
+    const tf = await import('@tensorflow/tfjs')
+    tf.env().set('WEBGL_PACK', false)
+    if (isIosDevice()) tf.env().set('WEBGL_VERSION', 1)
+  } catch (cause) { debugAr('webgl:mobile-fallback-unavailable', cause) }
+}
+
 const getParticleCount = () => window.matchMedia?.('(max-width: 768px)').matches ? 24 : PARTICLE_COUNT
 
 type ParticleBurst = 'scan' | 'confirmed' | 'reacquired'
@@ -317,6 +330,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       }
       const anchorTargetSet = new Set(anchorTargetIds)
       const targetsToTrack = TARGETS.filter((target) => anchorTargetSet.has(target.id))
+      await configureMobileWebgl()
       const instance = new MindARThree({ container: containerRef.current, imageTargetSrc: '/assets/tracking/colombia-targets.mind', maxTrack: Math.max(1, activeTargetIdsRef.current.size), warmupTolerance: MINDAR_WARMUP_TOLERANCE, missTolerance: MINDAR_MISS_TOLERANCE, filterMinCF: MINDAR_FILTER_MIN_CUTOFF, filterBeta: MINDAR_FILTER_BETA, uiLoading: 'no', uiScanning: 'no', uiError: 'no' })
       mindarRef.current = instance
       const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
