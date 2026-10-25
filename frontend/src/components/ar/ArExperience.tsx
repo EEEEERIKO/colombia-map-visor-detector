@@ -228,15 +228,28 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
 
   useEffect(() => {
     const active = activeTargetIdsRef.current
-    labelsRef.current.forEach((label) => { label.style.display = 'none' })
+    labelsRef.current.forEach((label) => { label.style.display = 'none'; label.style.visibility = 'hidden' })
     scanElementsRef.current.forEach((scan, targetId) => {
-      if (!active.has(targetId)) { scan.style.visibility = 'hidden'; scan.style.display = 'none' }
+      if (!active.has(targetId)) {
+        // Do not wait for MindAR's missTolerance after changing stages. The
+        // previous target is no longer relevant as soon as the next target is
+        // selected, even if the camera is still paused over the old map.
+        scan.style.setProperty('visibility', 'hidden', 'important')
+        scan.style.setProperty('display', 'none', 'important')
+        scan.style.setProperty('opacity', '0', 'important')
+      }
       else if (!scan.classList.contains('is-complete')) scan.style.display = 'block'
     })
     highlightElementsRef.current.forEach((highlight, targetId) => {
-      if (!active.has(targetId)) { highlight.style.visibility = 'hidden'; highlight.style.display = 'none'; highlight.classList.remove('is-scanning', 'is-confirmed', 'is-persistent', 'is-reacquired') }
+      if (!active.has(targetId)) {
+        highlight.style.setProperty('visibility', 'hidden', 'important')
+        highlight.style.setProperty('display', 'none', 'important')
+        highlight.style.setProperty('opacity', '0', 'important')
+        highlight.classList.remove('is-scanning', 'is-confirmed', 'is-persistent', 'is-reacquired')
+      }
       else highlight.style.display = 'block'
     })
+    particleSystemsRef.current.forEach((particles, targetId) => { if (!active.has(targetId)) particles.hide() })
     setTracking((current) => Object.fromEntries(TARGETS.map((target) => [target.id, active.has(target.id) ? current[target.id] : 'not-detected'])))
   }, [activeTargetIds.join('|')])
 
