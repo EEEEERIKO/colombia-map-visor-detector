@@ -61,7 +61,7 @@ const regionalSlides: Record<string, Slide[]> = {
 }
 
 const mapSlides: Slide[] = [
-  { eyebrow: 'PRIMERA PISTA', title: 'Algo acaba de aparecer', body: 'Montañas, selvas, llanuras y costas… ¿qué secretos esconderá este lugar?', video: '/assets/map-discovered/Camera_approaching_golden_Colomb…_20261020150145.gif', alt: 'Animación dorada del mapa detectado' },
+  { eyebrow: 'PRIMERA PISTA', title: 'Algo acaba de aparecer', body: 'Montañas, selvas, llanuras y costas… ¿qué secretos esconderá este lugar?', video: '/assets/map-discovered/map-approach-lite.webp', alt: 'Animación dorada del mapa detectado' },
   { eyebrow: 'SIGUE LA PISTA', title: 'Hay más por investigar', body: 'Acabamos de encontrar una pista. Exploremos más de cerca.', image: '/assets/map-discovered/map-contour.webp', alt: 'Detalle luminoso del mapa detectado' },
 ]
 

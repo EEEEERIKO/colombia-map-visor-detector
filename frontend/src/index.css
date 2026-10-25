@@ -155,3 +155,8 @@ button:focus-visible { outline:3px solid #172e54; outline-offset:3px; }
   .home-copy{gap:8px}
   .home-map{height:clamp(220px,34svh,300px)}
 }
+@media(max-width:768px){
+  .ar-experience.is-paused .ar-view video{filter:brightness(.78)!important;transform:none!important}
+  .ar-experience.is-paused .ar-view-shell:after{backdrop-filter:none}
+  .ar-discovery-experience{contain:layout paint;will-change:transform;box-shadow:4px 5px 0 #07141dcc}
+}

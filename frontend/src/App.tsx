@@ -224,8 +224,9 @@ export default function App() {
       return
     }
     try {
+      const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: mobile ? 1280 : 1920 }, height: { ideal: mobile ? 720 : 1080 }, frameRate: { ideal: 24, max: 30 } },
         audio: false,
       })
       setCameraPreviewStream(stream)
@@ -237,7 +238,6 @@ export default function App() {
     }
   }
   const activeTargets: TargetId[] = screen === 'challenge' ? ['colombia-completa'] : screen === 'regions' && currentRegion ? [currentRegion.id] : []
-  const allArTargetIds: TargetId[] = ['colombia-completa', ...regionalTargetIds]
   const isArScreen = screen === 'challenge' || screen === 'regions' || screen === 'quiz' || screen === 'complete'
   const isRegionSearch = screen === 'regions' && Boolean(currentRegion && currentCopy)
   const arDiscoveryOpen = mapDiscoveryOpen || Boolean(discoveryTargetId) || quizTransitioning || screen === 'quiz' || screen === 'complete'
@@ -268,7 +268,7 @@ export default function App() {
       </section>}
       {isArScreen && <section className={`game-screen mission-screen ar-fullscreen-screen ${arDiscoveryOpen ? 'discovery-open' : ''}`} aria-labelledby={isRegionSearch ? 'region-title' : 'challenge-title'}>
         <h1 id={isRegionSearch ? 'region-title' : 'challenge-title'} className="sr-only">{isRegionSearch ? `¡Encontremos la ${regionOrdinals[regionIndex].toLowerCase()} región!` : '¡Encuentra este mapa!'}</h1>
-        <ArExperience activeTargetIds={activeTargets} anchorTargetIds={allArTargetIds} cameraStream={cameraPreviewStream ?? undefined} paused={arDiscoveryOpen} disabled={quizTransitioning || screen === 'quiz' || screen === 'complete'} onTargetFound={(targetId) => { debugApp('target-found-callback', { targetId, screen }) }} onTargetLost={(targetId) => { debugApp('target-lost-callback', { targetId, screen }) }} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} cameraOverlay={null} anchoredScan={screen === 'challenge' || isRegionSearch} anchoredScanImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : '/assets/ui/white-map.png'} autoStart showDetails={false} />
+        <ArExperience activeTargetIds={activeTargets} anchorTargetIds={activeTargets} cameraStream={cameraPreviewStream ?? undefined} paused={arDiscoveryOpen} disabled={quizTransitioning || screen === 'quiz' || screen === 'complete'} onTargetFound={(targetId) => { debugApp('target-found-callback', { targetId, screen }) }} onTargetLost={(targetId) => { debugApp('target-lost-callback', { targetId, screen }) }} onTargetConfirmed={handleTargetConfirmed} onValidationChange={updateValidation} heading="" description="" confirmationDurationMs={2000} cameraOverlay={null} anchoredScan={screen === 'challenge' || isRegionSearch} anchoredScanImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : '/assets/ui/white-map.png'} autoStart showDetails={false} />
         {(screen === 'challenge' || screen === 'regions') && <div className="ar-top-overlay"><RegionProgressOverlay foundRegions={foundRegions} /></div>}
         <CameraGuidanceOverlay referenceImage={isRegionSearch && currentRegion ? regionReferenceAssets[currentRegion.id] : whiteMap} discoveryOpen={arDiscoveryOpen} message={screen === 'challenge' ? '¡ACERCA TU CÁMARA AL MAPA!' : currentCopy?.clue ?? 'Estamos preparando el próximo descubrimiento.'} />
         {isRegionSearch && currentRegion && <div className="ar-region-guide-overlay">

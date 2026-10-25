@@ -21,3 +21,8 @@
 @keyframes center-discovery-in { from { opacity:0; transform:translate(-50%,-50%) scale(.72); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } } @keyframes center-discovery-pulse { 0%,100% { opacity:.7; transform:scale(.96); } 50% { opacity:1; transform:scale(1.04); } }
 .ar-center-particle-test i { animation-delay:var(--particle-delay); }
 @media(prefers-reduced-motion:reduce){.ar-target-highlight.is-confirmed,.ar-target-highlight.is-confirmed .ar-target-highlight-halo,.ar-target-highlight.is-confirmed .ar-target-highlight-image,.ar-target-highlight.is-confirmed .ar-target-highlight-sweep,.ar-target-highlight.is-confirmed .ar-target-highlight-pulse,.ar-target-highlight.is-confirmed .ar-target-highlight-particle{animation:none}.ar-target-highlight.is-confirmed,.ar-target-highlight.is-persistent{opacity:1;transform:scale(1)}}
+@media(max-width:768px){
+  .ar-target-highlight.is-persistent .ar-target-highlight-particle{animation:none!important;opacity:.5}
+  .ar-target-highlight.is-persistent .ar-target-highlight-halo{filter:blur(16px)}
+  .ar-target-highlight-image{filter:var(--target-filter) drop-shadow(0 0 8px var(--target-accent))}
+}

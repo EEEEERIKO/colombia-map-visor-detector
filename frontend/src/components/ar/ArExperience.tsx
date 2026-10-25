@@ -22,6 +22,8 @@ const MINDAR_FILTER_MIN_CUTOFF = 0.0005
 const MINDAR_FILTER_BETA = 0.5
 const PARTICLE_COUNT = 48
 
+const getParticleCount = () => window.matchMedia?.('(max-width: 768px)').matches ? 24 : PARTICLE_COUNT
+
 type ParticleBurst = 'scan' | 'confirmed' | 'reacquired'
 
 type ParticleAttribute = { needsUpdate: boolean }
@@ -43,7 +45,7 @@ class AnchoredParticleSystem {
   private hasLoggedUpdate = false
   private readonly targetId: TargetId
 
-  constructor(targetId: TargetId, color: string, count = PARTICLE_COUNT) {
+  constructor(targetId: TargetId, color: string, count = getParticleCount()) {
     this.targetId = targetId
     this.positions = new Float32Array(count * 3)
     this.velocities = new Float32Array(count * 3)
@@ -467,9 +469,10 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
           }
           if (!constraints?.video) return originalGetUserMedia.call(mediaDevices, constraints).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
           const videoConstraints = typeof constraints.video === 'object' ? constraints.video : {}
+          const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
           return originalGetUserMedia.call(mediaDevices, {
             ...constraints,
-            video: { ...videoConstraints, facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            video: { ...videoConstraints, facingMode: { ideal: 'environment' }, width: { ideal: mobile ? 1280 : 1920 }, height: { ideal: mobile ? 720 : 1080 }, frameRate: { ideal: 24, max: 30 } },
           }).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
         }
         await instance.start()
