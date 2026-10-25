@@ -114,3 +114,44 @@ button:focus-visible { outline:3px solid #172e54; outline-offset:3px; }
 .audio-toggle{position:fixed;z-index:120;top:calc(12px + env(safe-area-inset-top));right:14px;display:flex;align-items:center;gap:6px;min-height:38px;padding:7px 11px;border:2px solid var(--ink);border-radius:999px;color:var(--ink);background:#ffd500;box-shadow:3px 4px 0 var(--ink);font-size:.72rem;font-weight:900;cursor:pointer}.audio-toggle img{width:20px;height:20px;object-fit:contain;filter:none}.audio-toggle.is-muted{color:#fff;background:#17344a}.audio-toggle.is-muted img{filter:brightness(0) invert(1)}.audio-toggle:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .volume-notice{position:relative;padding:8px 13px;border-radius:999px;background:#fff7d2;box-shadow:0 0 0 3px #ffd50055;animation:volume-notice-pulse 2.2s ease-in-out infinite}.volume-notice-icon{width:1.35em;height:1.35em;animation:volume-icon-attention 1.4s ease-in-out infinite}.button-icon{margin-left:.5rem;flex:none;filter:brightness(0) invert(1)}.camera-permission-icon{filter:brightness(0) invert(1)}
 @keyframes volume-notice-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 3px #ffd50055}50%{transform:scale(1.035);box-shadow:0 0 0 7px #ffd50022,0 0 18px #ffd50066}}@keyframes volume-icon-attention{0%,100%{transform:rotate(0) scale(1)}18%{transform:rotate(-10deg) scale(1.08)}36%{transform:rotate(10deg) scale(1.08)}54%{transform:rotate(-6deg) scale(1.04)}72%{transform:rotate(0) scale(1)}}
+
+/* La portada móvil aprovecha el viewport completo sin dejar el contenido
+   comprimido arriba ni reservar un lienzo sobredimensionado debajo. */
+@media(max-width:600px){
+  .game-main{
+    min-height:100svh;
+    padding:14px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .game-screen{
+    max-width:none;
+    min-height:calc(100svh - 38px);
+    padding:10px 0;
+  }
+  .home-screen{
+    justify-content:center;
+    gap:12px;
+  }
+  .home-copy{
+    width:min(100%,520px);
+    margin-inline:auto;
+    gap:11px;
+  }
+  .home-screen .game-kicker{padding:6px 11px;font-size:.68rem}
+  .home-screen h1{max-width:100%;font-size:clamp(2.5rem,10.5vw,3.7rem);line-height:.96}
+  .home-screen .volume-notice{width:min(100%,430px);padding:8px 12px;font-size:.9rem}
+  .home-screen .game-primary{width:min(100%,440px);min-height:52px;font-size:1.16rem}
+  .home-screen .home-hint{max-width:390px;font-size:.84rem;line-height:1.15}
+  .home-map{
+    min-height:0;
+    height:clamp(260px,39svh,380px);
+    margin-top:2px;
+  }
+  .home-map img,.map-rays{width:min(78vw,330px)}
+  .map-sticker{right:4%;top:9%;font-size:.7rem}
+  .audio-toggle{top:calc(8px + env(safe-area-inset-top));right:10px;min-height:34px;padding:6px 9px;font-size:.66rem}
+}
+@media(max-width:600px) and (max-height:740px){
+  .home-screen{gap:8px}
+  .home-copy{gap:8px}
+  .home-map{height:clamp(220px,34svh,300px)}
+}
