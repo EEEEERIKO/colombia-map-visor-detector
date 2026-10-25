@@ -42,6 +42,16 @@ const regionAudio: Record<RegionalTargetId, string> = {
   'region-amazonia': audioPath('audio-amazonas.mp3'),
 }
 
+const stabilizeCameraTrack = async (stream: MediaStream) => {
+  const track = stream.getVideoTracks?.()[0]
+  if (!track?.applyConstraints) return
+  const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & { focusMode?: string[]; zoom?: { min?: number; max?: number } }
+  const advanced: Array<Record<string, unknown>> = []
+  if (capabilities.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' })
+  if (capabilities.zoom && capabilities.zoom.min !== undefined && capabilities.zoom.max !== undefined && capabilities.zoom.min <= 1 && capabilities.zoom.max >= 1) advanced.push({ zoom: 1 })
+  if (advanced.length) { try { await track.applyConstraints({ advanced } as MediaTrackConstraints) } catch { /* Safari can reject optional camera capabilities. */ } }
+}
+
 function AudioToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   return <button className={`audio-toggle ${enabled ? 'is-enabled' : 'is-muted'}`} type="button" onClick={onToggle} aria-label={enabled ? 'Desactivar audio' : 'Activar audio'} aria-pressed={enabled} title={enabled ? 'Desactivar audio' : 'Activar audio'}><img src={iconPath('volumen.svg')} alt="" /> <span>{enabled ? 'Audio' : 'Silencio'}</span></button>
 }
@@ -226,9 +236,10 @@ export default function App() {
     try {
       const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: mobile ? 1280 : 1920 }, height: { ideal: mobile ? 720 : 1080 }, frameRate: { ideal: 24, max: 30 } },
+        video: { facingMode: 'environment', width: { ideal: mobile ? 1280 : 1920 }, height: { ideal: mobile ? 720 : 1080 }, frameRate: { ideal: 24, max: 30 } },
         audio: false,
       })
+      await stabilizeCameraTrack(stream)
       setCameraPreviewStream(stream)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {

@@ -22,6 +22,21 @@ const MINDAR_FILTER_MIN_CUTOFF = 0.0005
 const MINDAR_FILTER_BETA = 0.5
 const PARTICLE_COUNT = 48
 
+const isIosDevice = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+const stabilizeCameraTrack = async (stream: MediaStream) => {
+  const track = stream.getVideoTracks?.()[0]
+  if (!track?.applyConstraints) return
+  const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & { focusMode?: string[]; zoom?: { min?: number; max?: number } }
+  const advanced: Array<Record<string, unknown>> = []
+  if (capabilities.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' })
+  // Keeping the optical zoom at 1 avoids an avoidable lens jump on iPhone Pro
+  // models when the printed target is brought close to the camera.
+  if (capabilities.zoom && capabilities.zoom.min !== undefined && capabilities.zoom.max !== undefined && capabilities.zoom.min <= 1 && capabilities.zoom.max >= 1) advanced.push({ zoom: 1 })
+  if (!advanced.length) return
+  try { await track.applyConstraints({ advanced } as MediaTrackConstraints) } catch { /* Safari exposes capabilities inconsistently. */ }
+}
+
 const getParticleCount = () => window.matchMedia?.('(max-width: 768px)').matches ? 24 : PARTICLE_COUNT
 
 type ParticleBurst = 'scan' | 'confirmed' | 'reacquired'
@@ -306,7 +321,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       mindarRef.current = instance
       const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
       const rendererWithPixelRatio = instance.renderer as unknown as { setPixelRatio?: (ratio: number) => void }
-      rendererWithPixelRatio.setPixelRatio?.(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2))
+      rendererWithPixelRatio.setPixelRatio?.(Math.min(window.devicePixelRatio || 1, isIosDevice() ? 1 : mobile ? 1.5 : 2))
       debugAr('mindar:created', { maxTrack: Math.max(1, activeTargetIdsRef.current.size), targetsToTrack: targetsToTrack.map((target) => target.id), hasRenderer: Boolean(instance.renderer), hasCssRenderer: Boolean(instance.cssRenderer) })
       const runId = runIdRef.current
       targetsToTrack.forEach((target) => {
@@ -480,8 +495,8 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
           const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
           return originalGetUserMedia.call(mediaDevices, {
             ...constraints,
-            video: { ...videoConstraints, facingMode: { ideal: 'environment' }, width: { ideal: mobile ? 1280 : 1920 }, height: { ideal: mobile ? 720 : 1080 }, frameRate: { ideal: 24, max: 30 } },
-          }).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
+            video: { ...videoConstraints, facingMode: 'environment', width: { ideal: mobile ? 1280 : 1920 }, height: { ideal: mobile ? 720 : 1080 }, frameRate: { ideal: 24, max: 30 } },
+          }).then(async (stream) => { cameraStreamsRef.current.add(stream); await stabilizeCameraTrack(stream); return stream })
         }
         await instance.start()
       } finally {
@@ -521,6 +536,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       stop(); setExperienceState('error')
       if (cause instanceof DOMException && cause.name === 'NotAllowedError') setError('Camera permission was denied. Allow camera access for this site and try again.')
       else if (cause instanceof Error && cause.message === 'Camera access requires HTTPS or localhost.') setError('Camera access requires HTTPS or localhost. Open the app through http://localhost:5173 or an HTTPS URL.')
+      else if (isIosDevice() && cause instanceof Error && /shader|webgl|link/i.test(cause.message)) setError('Este iPhone tiene un problema de compatibilidad entre iOS y el motor AR. La cámara funciona, pero el detector no puede iniciar. Actualiza iOS y vuelve a probar; si continúa, usa temporalmente otro dispositivo.')
       else setError('AR tracking could not start. Check camera permissions, HTTPS/localhost, and the tracking resource.')
     }
   }
