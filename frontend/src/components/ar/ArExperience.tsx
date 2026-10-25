@@ -178,6 +178,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
   const particleSystemsRef = useRef(new Map<TargetId, AnchoredParticleSystem>())
   const animationLoopRef = useRef<(() => void) | null>(null)
   const cameraStreamsRef = useRef(new Set<MediaStream>())
+  const externalCameraStreamRef = useRef<MediaStream | null>(null)
   const elapsedRef = useRef(0)
   const [experienceState, setExperienceState] = useState<'idle' | 'starting' | 'active' | 'error' | 'stopped'>('idle')
   const [error, setError] = useState('')
@@ -200,9 +201,13 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
   useEffect(() => {
     const active = activeTargetIdsRef.current
     labelsRef.current.forEach((label) => { label.style.display = 'none' })
-    scanElementsRef.current.forEach((scan, targetId) => { if (!active.has(targetId)) { scan.style.visibility = 'hidden'; scan.style.display = 'none' } })
+    scanElementsRef.current.forEach((scan, targetId) => {
+      if (!active.has(targetId)) { scan.style.visibility = 'hidden'; scan.style.display = 'none' }
+      else if (!scan.classList.contains('is-complete')) scan.style.display = 'block'
+    })
     highlightElementsRef.current.forEach((highlight, targetId) => {
-      if (!active.has(targetId)) { highlight.style.visibility = 'hidden'; highlight.classList.remove('is-scanning', 'is-confirmed', 'is-persistent', 'is-reacquired') }
+      if (!active.has(targetId)) { highlight.style.visibility = 'hidden'; highlight.style.display = 'none'; highlight.classList.remove('is-scanning', 'is-confirmed', 'is-persistent', 'is-reacquired') }
+      else highlight.style.display = 'block'
     })
     setTracking((current) => Object.fromEntries(TARGETS.map((target) => [target.id, active.has(target.id) ? current[target.id] : 'not-detected'])))
   }, [activeTargetIds.join('|')])
@@ -231,8 +236,7 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
     containerRef.current?.querySelectorAll('video').forEach((video) => {
       video.pause()
       const stream = video.srcObject as MediaStream | null
-      stream?.getTracks().forEach((track) => track.stop())
-      video.srcObject = null
+      if (stream && stream !== externalCameraStreamRef.current) stream.getTracks().forEach((track) => track.stop())
     })
   }
 
@@ -258,6 +262,8 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       instance.renderer.dispose()
       mindarRef.current = null
     }
+    containerRef.current?.querySelectorAll('video').forEach((video) => { video.srcObject = null })
+    externalCameraStreamRef.current = null
     if (containerRef.current) containerRef.current.replaceChildren()
     setExperienceState('stopped')
     setTracking(Object.fromEntries(TARGETS.map((target) => [target.id, 'not-detected'])))
@@ -298,6 +304,9 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       const targetsToTrack = TARGETS.filter((target) => anchorTargetSet.has(target.id))
       const instance = new MindARThree({ container: containerRef.current, imageTargetSrc: '/assets/tracking/colombia-targets.mind', maxTrack: Math.max(1, activeTargetIdsRef.current.size), warmupTolerance: MINDAR_WARMUP_TOLERANCE, missTolerance: MINDAR_MISS_TOLERANCE, filterMinCF: MINDAR_FILTER_MIN_CUTOFF, filterBeta: MINDAR_FILTER_BETA, uiLoading: 'no', uiScanning: 'no', uiError: 'no' })
       mindarRef.current = instance
+      const mobile = window.matchMedia?.('(max-width: 768px)').matches ?? false
+      const rendererWithPixelRatio = instance.renderer as unknown as { setPixelRatio?: (ratio: number) => void }
+      rendererWithPixelRatio.setPixelRatio?.(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2))
       debugAr('mindar:created', { maxTrack: Math.max(1, activeTargetIdsRef.current.size), targetsToTrack: targetsToTrack.map((target) => target.id), hasRenderer: Boolean(instance.renderer), hasCssRenderer: Boolean(instance.cssRenderer) })
       const runId = runIdRef.current
       targetsToTrack.forEach((target) => {
@@ -463,9 +472,8 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
       try {
         mediaDevices.getUserMedia = (constraints) => {
           if (cameraStream) {
-            const stream = typeof cameraStream.clone === 'function' ? cameraStream.clone() : cameraStream
-            cameraStreamsRef.current.add(stream)
-            return Promise.resolve(stream)
+            externalCameraStreamRef.current = cameraStream
+            return Promise.resolve(cameraStream)
           }
           if (!constraints?.video) return originalGetUserMedia.call(mediaDevices, constraints).then((stream) => { cameraStreamsRef.current.add(stream); return stream })
           const videoConstraints = typeof constraints.video === 'object' ? constraints.video : {}
@@ -485,12 +493,22 @@ export function ArExperience({ onValidationChange, onTargetConfirmed, onTargetFo
         if (controller) controller.interestedTargetIndex = TARGETS.findIndex((target) => activeTargetIdsRef.current.has(target.id))
       }
       const video = containerRef.current.querySelector('video')
-      if (video) { video.muted = true; video.playsInline = true; video.style.zIndex = '0' }
+      if (video) {
+        video.muted = true
+        video.playsInline = true
+        video.autoplay = true
+        video.setAttribute('playsinline', '')
+        video.style.zIndex = '0'
+        if (video.paused) await video.play().catch((cause) => debugAr('video:play-failed', cause))
+      }
       let previousTime = performance.now()
+      let previousRender = 0
       animationLoopRef.current = () => {
         const now = performance.now()
         const delta = Math.min(.05, Math.max(0, (now - previousTime) / 1000))
         previousTime = now
+        if (mobile && now - previousRender < 33) return
+        previousRender = now
         elapsedRef.current += delta
         particleSystemsRef.current.forEach((particles) => particles.update(delta, elapsedRef.current))
         instance.renderer.render(instance.scene, instance.camera)
