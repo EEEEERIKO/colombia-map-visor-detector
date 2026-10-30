@@ -103,3 +103,5 @@
   .finale-modal .finale-carousel-copy p { min-height:32px; margin:4px 0 8px; font-size:.78rem; }
   .finale-modal .finale-carousel-controls button { width:38px; height:32px; }
 }
+/* New regional photos use a filled crop so no black bands appear in cards or the modal. */
+.finale-photo-frame.has-photo img:first-child { object-fit: cover !important; object-position: center center !important; }

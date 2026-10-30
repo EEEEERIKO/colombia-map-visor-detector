@@ -160,3 +160,6 @@ button:focus-visible { outline:3px solid #172e54; outline-offset:3px; }
   .ar-experience.is-paused .ar-view-shell:after{backdrop-filter:none}
   .ar-discovery-experience{contain:layout paint;will-change:transform;box-shadow:4px 5px 0 #07141dcc}
 }
+/* Regional photos fill their frame without distortion; portrait images are cropped, never stretched. */
+.ar-discovery-visual > img { object-fit: cover; object-position: center; }
+.ar-discovery-map-visual > img { object-fit: contain; }
