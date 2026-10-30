@@ -29,34 +29,34 @@ const regionPhoto = (region: string, name: string) => `/assets/regions/${region}
 
 const regionalSlides: Record<string, Slide[]> = {
   CARIBE: [
-    { eyebrow: 'PAISAJE', title: 'El sol tiene otro ritmo', body: 'El mar Caribe abre la región con luz, color y paisajes que invitan a quedarse.', image: regionPhoto('caribe', 'paisaje.jpg'), alt: 'Playa del Caribe colombiano' },
+    { eyebrow: 'PAISAJE', title: 'El sol tiene otro ritmo', body: 'El mar Caribe abre la región con luz, color y paisajes que invitan a quedarse.', image: regionPhoto('caribe', 'paisaje.webp'), alt: 'Playa del Caribe colombiano' },
     { eyebrow: 'LOCALIDAD', title: 'Historia junto al mar', body: 'Cartagena guarda su historia entre calles, plazas y arquitectura viva.', image: regionPhoto('caribe', 'localidad.webp'), alt: 'Catedral de Santa Catalina en Cartagena' },
-    { eyebrow: 'SABORES', title: 'Sabores del territorio', body: 'La cocina caribeña reúne ingredientes, colores y recetas que también cuentan historias.', image: regionPhoto('caribe', 'plato.jpg'), alt: 'Plato típico del Caribe colombiano' },
-    { eyebrow: 'CULTURA', title: 'Una región que se mueve', body: 'El carnaval y sus trajes convierten la celebración en una forma de reconocerse.', image: regionPhoto('caribe', 'cultura.jpeg'), alt: 'Mujer con traje de carnaval en Cartagena' },
+    { eyebrow: 'SABORES', title: 'Sabores del territorio', body: 'La cocina caribeña reúne ingredientes, colores y recetas que también cuentan historias.', image: regionPhoto('caribe', 'plato.webp'), alt: 'Plato típico del Caribe colombiano' },
+    { eyebrow: 'CULTURA', title: 'Una región que se mueve', body: 'El carnaval y sus trajes convierten la celebración en una forma de reconocerse.', image: regionPhoto('caribe', 'cultura.webp'), alt: 'Mujer con traje de carnaval en Cartagena' },
   ],
   ANDINA: [
-    { eyebrow: 'PAISAJE', title: 'Montañas que esconden mundos', body: 'La cordillera y sus frailejones reúnen alturas, agua y cambios de clima.', image: regionPhoto('andina', 'paisaje.jpeg'), alt: 'Cordillera de los Andes con frailejones' },
-    { eyebrow: 'LOCALIDAD', title: 'Historias entre calles', body: 'Bogotá es una de las ciudades que crece y se transforma entre las montañas andinas.', image: regionPhoto('andina', 'localidad.jpg'), alt: 'Vista urbana de Bogotá' },
-    { eyebrow: 'SABORES', title: 'Una mesa con historia', body: 'La bandeja paisa reúne ingredientes y tradiciones de la cocina andina.', image: regionPhoto('andina', 'plato.jpeg'), alt: 'Bandeja paisa' },
-    { eyebrow: 'CULTURA', title: 'El territorio también baila', body: 'El bambuco convierte la música, el movimiento y la memoria en una celebración.', image: regionPhoto('andina', 'cultura.jpg'), alt: 'Pareja bailando bambuco' },
+    { eyebrow: 'PAISAJE', title: 'Montañas que esconden mundos', body: 'La cordillera y sus frailejones reúnen alturas, agua y cambios de clima.', image: regionPhoto('andina', 'paisaje.webp'), alt: 'Cordillera de los Andes con frailejones' },
+    { eyebrow: 'LOCALIDAD', title: 'Historias entre calles', body: 'Bogotá es una de las ciudades que crece y se transforma entre las montañas andinas.', image: regionPhoto('andina', 'localidad.webp'), alt: 'Vista urbana de Bogotá' },
+    { eyebrow: 'SABORES', title: 'Una mesa con historia', body: 'La bandeja paisa reúne ingredientes y tradiciones de la cocina andina.', image: regionPhoto('andina', 'plato.webp'), alt: 'Bandeja paisa' },
+    { eyebrow: 'CULTURA', title: 'El territorio también baila', body: 'El bambuco convierte la música, el movimiento y la memoria en una celebración.', image: regionPhoto('andina', 'cultura.webp'), alt: 'Pareja bailando bambuco' },
   ],
   PACÍFICA: [
     { eyebrow: 'PAISAJE', title: 'Un mundo lleno de vida', body: 'Selva, ríos y un océano extraordinario forman un paisaje en movimiento.', image: regionPhoto('pacifica', 'paisaje.webp'), alt: 'Paisaje de la región Pacífica' },
-    { eyebrow: 'LOCALIDAD', title: 'Historia a orillas del Pacífico', body: 'La arquitectura y los lugares de encuentro también guardan la memoria de la región.', image: regionPhoto('pacifica', 'localidad.jpg'), alt: 'Iglesia La Ermita en Cali' },
-    { eyebrow: 'SABORES', title: 'Sabores del litoral', body: 'Los productos del mar llegan a la mesa en preparaciones llenas de identidad.', image: regionPhoto('pacifica', 'plato.jpg'), alt: 'Cazuela de mariscos' },
-    { eyebrow: 'BIODIVERSIDAD', title: 'Vida por descubrir', body: 'Las ballenas y otras especies recuerdan que este océano es uno de los grandes tesoros del Pacífico.', image: regionPhoto('pacifica', 'biodiversidad.jpg'), alt: 'Ballena saltando en el océano Pacífico' },
+    { eyebrow: 'LOCALIDAD', title: 'Historia a orillas del Pacífico', body: 'La arquitectura y los lugares de encuentro también guardan la memoria de la región.', image: regionPhoto('pacifica', 'localidad.webp'), alt: 'Iglesia La Ermita en Cali' },
+    { eyebrow: 'SABORES', title: 'Sabores del litoral', body: 'Los productos del mar llegan a la mesa en preparaciones llenas de identidad.', image: regionPhoto('pacifica', 'plato.webp'), alt: 'Cazuela de mariscos' },
+    { eyebrow: 'BIODIVERSIDAD', title: 'Vida por descubrir', body: 'Las ballenas y otras especies recuerdan que este océano es uno de los grandes tesoros del Pacífico.', image: regionPhoto('pacifica', 'biodiversidad.webp'), alt: 'Ballena saltando en el océano Pacífico' },
   ],
   ORINOQUÍA: [
-    { eyebrow: 'PAISAJE', title: 'Hasta donde alcanza la mirada', body: 'Las llanuras, los ríos y el horizonte abierto construyen una sensación de amplitud.', image: regionPhoto('orinoquia', 'paisaje.jpg'), alt: 'Panorámica de Villavicencio y la Orinoquía' },
-    { eyebrow: 'LOCALIDAD', title: 'Un territorio de caminos', body: 'El atardecer sobre el llano muestra la relación entre paisaje, trabajo y recorrido.', image: regionPhoto('orinoquia', 'localidad.jpg'), alt: 'Hombre a caballo al atardecer en la Orinoquía' },
-    { eyebrow: 'SABORES', title: 'Fuego y tradición', body: 'La carne a la llanera es una de las preparaciones que identifica la cocina de los Llanos.', image: regionPhoto('orinoquia', 'plato.jpg'), alt: 'Carne a la llanera' },
-    { eyebrow: 'CULTURA', title: 'Tradición que suena', body: 'El joropo reúne música, baile y una manera propia de celebrar el territorio.', image: regionPhoto('orinoquia', 'cultura.jpg'), alt: 'Baile tradicional de joropo' },
+    { eyebrow: 'PAISAJE', title: 'Hasta donde alcanza la mirada', body: 'Las llanuras, los ríos y el horizonte abierto construyen una sensación de amplitud.', image: regionPhoto('orinoquia', 'paisaje.webp'), alt: 'Panorámica de Villavicencio y la Orinoquía' },
+    { eyebrow: 'LOCALIDAD', title: 'Un territorio de caminos', body: 'El atardecer sobre el llano muestra la relación entre paisaje, trabajo y recorrido.', image: regionPhoto('orinoquia', 'localidad.webp'), alt: 'Hombre a caballo al atardecer en la Orinoquía' },
+    { eyebrow: 'SABORES', title: 'Fuego y tradición', body: 'La carne a la llanera es una de las preparaciones que identifica la cocina de los Llanos.', image: regionPhoto('orinoquia', 'plato.webp'), alt: 'Carne a la llanera' },
+    { eyebrow: 'CULTURA', title: 'Tradición que suena', body: 'El joropo reúne música, baile y una manera propia de celebrar el territorio.', image: regionPhoto('orinoquia', 'cultura.webp'), alt: 'Baile tradicional de joropo' },
   ],
   AMAZONÍA: [
-    { eyebrow: 'PAISAJE', title: 'Los secretos de la gran selva', body: 'El río Amazonas y su vegetación muestran un territorio que se descubre paso a paso.', image: regionPhoto('amazonia', 'paisaje.jpg'), alt: 'Río y vegetación de la Amazonía colombiana' },
-    { eyebrow: 'BIODIVERSIDAD', title: 'Una vida extraordinaria', body: 'La fauna amazónica convierte cada recorrido en una oportunidad para descubrir nuevas especies.', image: regionPhoto('amazonia', 'biodiversidad.jpg'), alt: 'Fauna de la Amazonía colombiana' },
-    { eyebrow: 'SABORES', title: 'Sabores de río y selva', body: 'El pirarucú ahumado reúne ingredientes y conocimientos ligados a los ríos amazónicos.', image: regionPhoto('amazonia', 'plato.jpeg'), alt: 'Pirarucú ahumado de la Amazonía' },
-    { eyebrow: 'CULTURA', title: 'Conocimientos del territorio', body: 'Los pueblos y sus trajes tradicionales mantienen viva la relación con la selva y sus ríos.', image: regionPhoto('amazonia', 'cultura.jpg'), alt: 'Personas con trajes tradicionales amazónicos' },
+    { eyebrow: 'PAISAJE', title: 'Los secretos de la gran selva', body: 'El río Amazonas y su vegetación muestran un territorio que se descubre paso a paso.', image: regionPhoto('amazonia', 'paisaje.webp'), alt: 'Río y vegetación de la Amazonía colombiana' },
+    { eyebrow: 'BIODIVERSIDAD', title: 'Una vida extraordinaria', body: 'La fauna amazónica convierte cada recorrido en una oportunidad para descubrir nuevas especies.', image: regionPhoto('amazonia', 'biodiversidad.webp'), alt: 'Fauna de la Amazonía colombiana' },
+    { eyebrow: 'SABORES', title: 'Sabores de río y selva', body: 'El pirarucú ahumado reúne ingredientes y conocimientos ligados a los ríos amazónicos.', image: regionPhoto('amazonia', 'plato.webp'), alt: 'Pirarucú ahumado de la Amazonía' },
+    { eyebrow: 'CULTURA', title: 'Conocimientos del territorio', body: 'Los pueblos y sus trajes tradicionales mantienen viva la relación con la selva y sus ríos.', image: regionPhoto('amazonia', 'cultura.webp'), alt: 'Personas con trajes tradicionales amazónicos' },
   ],
 }
 
